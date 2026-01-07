@@ -224,19 +224,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         const response = await fetch('../wheel-options.json');
         if (response.ok) {
             const data = await response.json();
-            options = data.options.map(opt => opt.name);
-            console.log('Loaded wheel options from file:', options);
+            console.log('Raw options from JSON:', data.options);
+
+            // Filter out disabled options, then extract just the names
+            options = data.options
+                .filter(opt => {
+                    const isEnabled = opt.enabled !== false;
+                    console.log(`Option "${opt.name}" - enabled: ${opt.enabled}, will render: ${isEnabled}`);
+                    return isEnabled;
+                })
+                .map(opt => opt.name);
+
+            console.log('Final wheel options (enabled only):', options);
         }
     } catch (error) {
         console.warn('Could not load wheel options from file, using defaults');
     }
 
-    if (window.electron) {
-        const config = await window.electron.getConfig();
-        if (config.wheelOptions) {
-            options = config.wheelOptions;
-        }
-    }
+    // Don't override with config.wheelOptions - use the JSON file with enabled flags
+    // if (window.electron) {
+    //     const config = await window.electron.getConfig();
+    //     if (config.wheelOptions) {
+    //         options = config.wheelOptions;
+    //     }
+    // }
 
     window.wheel = new SpinWheel('wheelCanvas', options);
 });

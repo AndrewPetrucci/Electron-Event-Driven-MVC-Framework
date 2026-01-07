@@ -1,69 +1,10 @@
 {
     "options": [
         {
-            "name": "Dragons",
-            "command": "player.placeatme 0x00023ab5",
-            "description": "Spawn a dragon at player location"
-        },
-        {
-            "name": "Spiders",
-            "command": "player.placeatme 0x00058a4c",
-            "description": "Spawn a spider"
-        },
-        {
-            "name": "Fire",
-            "command": "player.castspell 0x00038f6d",
-            "description": "Cast fireball spell"
-        },
-        {
-            "name": "Ice",
-            "command": "player.castspell 0x0003d5a7",
-            "description": "Cast ice spike spell"
-        },
-        {
-            "name": "Lightning",
-            "command": "player.castspell 0x0004314f",
-            "description": "Cast chain lightning spell"
-        },
-        {
-            "name": "Teleport to random location",
-            "command": "player.moveto player",
-            "description": "Teleport (placeholder)"
-        },
-        {
-            "name": "Give random weapon",
-            "command": "player.additem 0x0001397e 1",
-            "description": "Give Daedric Sword"
-        },
-        {
-            "name": "Spawn enemy",
-            "command": "player.placeatme 0x00023ab5",
-            "description": "Spawn an enemy"
-        },
-        {
-            "name": "Apply random spell",
-            "command": "player.castspell 0x00038f6d",
-            "description": "Apply random spell effect"
-        },
-        {
-            "name": "Set difficulty to max",
-            "command": "setdifficulty 3",
-            "description": "Set game difficulty to maximum"
-        },
-        {
-            "name": "Give 10000 gold",
-            "command": "player.additem 0x0000000f 10000",
-            "description": "Add 10000 gold"
-        },
-        {
-            "name": "Blind effect",
-            "command": "player.castspell 0x0008dadc",
-            "description": "Apply blind effect"
-        },
-        {
-            "name": "Speed boost",
-            "command": "player.addspell 0x00056e1d",
-            "description": "Add speed boost spell"
+            "name": "Teleport to Whiterun",
+            "command": "coc Whiterun",
+            "description": "Teleport to Whiterun",
+            "enabled": true
         }
     ]
 }

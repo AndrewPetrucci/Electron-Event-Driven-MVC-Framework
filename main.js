@@ -156,7 +156,36 @@ app.on('ready', () => {
     // Initialize Twitch Client
     twitchClient = new TwitchClient();
     twitchClient.connect();
+
+    // Clear log files and event queue on startup
+    clearStartupQueues();
 });
+
+function clearStartupQueues() {
+    const userProfile = process.env.USERPROFILE;
+    const commandQueueFile = path.join(userProfile, 'Documents/My Games/Skyrim Special Edition/SKSE/Plugins/overlay-commands.txt');
+    const logFile = path.join(__dirname, 'command-executor.log');
+
+    // Clear command queue
+    try {
+        if (fs.existsSync(commandQueueFile)) {
+            fs.writeFileSync(commandQueueFile, '');
+            console.log('Cleared command queue');
+        }
+    } catch (error) {
+        console.warn('Could not clear command queue:', error);
+    }
+
+    // Clear AutoHotkey log
+    try {
+        if (fs.existsSync(logFile)) {
+            fs.writeFileSync(logFile, '');
+            console.log('Cleared command executor log');
+        }
+    } catch (error) {
+        console.warn('Could not clear log:', error);
+    }
+}
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
