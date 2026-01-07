@@ -1,0 +1,20 @@
+{
+    "options": [
+        {
+            "name": "Teleport to Whiterun",
+            "command": "coc Whiterun",
+            "description": "Teleport to Whiterun",
+            "enabled": true,
+            "application": "skyrim",
+            "controller": "AutoHotkey"
+        },
+        {
+            "name": "Teleport to Solitude",
+            "command": "coc Solitude",
+            "description": "Teleport to Solitude",
+            "enabled": true,
+            "application": "skyrim",
+            "controller": "AutoHotkey"
+        }
+    ]
+}

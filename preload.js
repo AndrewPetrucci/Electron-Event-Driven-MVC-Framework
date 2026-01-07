@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('electron', {
     moveWindowTo: (x, y) => ipcRenderer.send('move-window-to', { x, y }),
     getWindowPosition: () => ipcRenderer.sendSync('get-window-position'),
     getConfig: () => ipcRenderer.invoke('get-config'),
+    getGameName: () => ipcRenderer.invoke('get-game-name'),
     removeSpinResultListener: () => ipcRenderer.removeAllListeners('spin-result'),
     minimizeWindow: () => ipcRenderer.send('minimize-window'),
     closeWindow: () => ipcRenderer.send('close-window'),

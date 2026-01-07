@@ -1,21 +1,5 @@
 {
     "dataPath": "%USERPROFILE%\\Documents\\My Games\\Skyrim Special Edition\\SKSE\\Plugins\\overlay-data.json",
-    "mods": {
-        "sillyDeathPhysics": {
-            "name": "Silly Death Physics",
-            "nexusModId": 15927,
-            "enabled": true,
-            "actions": {
-                "toggle": {
-                    "type": "toggle",
-                    "key": "sillyphysics"
-                }
-            }
-        }
-    },
-    "wheelMappings": {
-        "Silly Death Physics": [
-            "sillyDeathPhysics"
-        ]
-    }
+    "mods": {},
+    "wheelMappings": {}
 }

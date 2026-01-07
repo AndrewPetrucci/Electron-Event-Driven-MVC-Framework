@@ -112,12 +112,27 @@ class ModRegistry {
 }
 
 class ModIntegration {
-    constructor(configPath = 'mod-config.json') {
+    constructor(configPath = 'mod-config.json', appToControllers = {}, controllerToApps = {}) {
         this.registry = new ModRegistry();
         this.config = this.loadConfig(configPath);
         this.dataPath = this.expandPath(this.config.dataPath);
+        this.appToControllers = appToControllers;
+        this.controllerToApps = controllerToApps;
         this.ensureDataDirectory();
         this.registerMods();
+        this.logMappings();
+    }
+
+    logMappings() {
+        console.log('[ModIntegration] Applications to Controllers:');
+        for (const app of Object.keys(this.appToControllers)) {
+            console.log(`  - ${app}`);
+        }
+
+        console.log('[ModIntegration] Controllers to Applications:');
+        for (const controller of Object.keys(this.controllerToApps)) {
+            console.log(`  - ${controller}`);
+        }
     }
 
     loadConfig(configPath) {
@@ -127,7 +142,11 @@ class ModIntegration {
             return JSON.parse(rawConfig);
         } catch (error) {
             console.error('Failed to load mod config:', error);
-            return { mods: {}, wheelMappings: {} };
+            return {
+                mods: {},
+                wheelMappings: {},
+                dataPath: path.join(process.env.USERPROFILE, 'Documents/My Games/Skyrim Special Edition/SKSE/Plugins/overlay-data.json')
+            };
         }
     }
 
@@ -138,6 +157,10 @@ class ModIntegration {
     }
 
     expandPath(dataPath) {
+        // Handle null/undefined paths
+        if (!dataPath) {
+            return null;
+        }
         // Expand environment variables like %USERPROFILE%
         return dataPath.replace(/%([^%]+)%/g, (match, varName) => {
             return process.env[varName] || match;
@@ -145,6 +168,10 @@ class ModIntegration {
     }
 
     ensureDataDirectory() {
+        // Skip if no data path configured
+        if (!this.dataPath) {
+            return;
+        }
         const dir = path.dirname(this.dataPath);
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });

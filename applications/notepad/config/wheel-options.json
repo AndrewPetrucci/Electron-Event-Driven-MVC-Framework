@@ -1,14 +1,6 @@
 {
     "options": [
         {
-            "name": "Teleport to Whiterun",
-            "command": "coc Whiterun",
-            "description": "Teleport to Whiterun",
-            "enabled": true,
-            "application": "skyrim",
-            "controller": "AutoHotkey"
-        },
-        {
             "name": "Insert Timestamp",
             "command": "insert_timestamp",
             "description": "Insert current date and time",

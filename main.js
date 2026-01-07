@@ -1,12 +1,19 @@
 const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { spawn } = require('child_process');
 const TwitchClient = require('./src/twitch');
 const ModIntegration = require('./src/mod-integration');
+const GameConfigLoader = require('./src/game-config-loader');
 
 let mainWindow;
 let twitchClient;
 let modIntegration;
+let gameConfig;
+let executorProcess;
+
+// Get game from environment or default to skyrim
+const GAME = process.env.GAME || 'skyrim';
 
 const WINDOW_WIDTH = 600;
 const WINDOW_HEIGHT = 600;
@@ -127,6 +134,9 @@ function createWindow() {
         event.returnValue = result;
     });
 
+    ipcMain.handle('get-game-name', () => {
+        return GAME;
+    });
 
     ipcMain.on('minimize-window', () => {
         mainWindow.minimize();
@@ -149,17 +159,137 @@ function createWindow() {
 app.on('ready', () => {
     createWindow();
 
+    // Load game-specific configuration
+    const configLoader = new GameConfigLoader(GAME);
+    gameConfig = configLoader.loadAll();
+    console.log(`[Main] Using game: ${GAME}`);
+    console.log(`[Main] Loaded ${gameConfig.wheelOptions.length} wheel options`);
+
+    // Build application -> controller and controller -> application mappings
+    const appToControllers = {};  // app -> Set<controllers>
+    const controllerToApps = {}; // controller -> Set<apps>
+
+    gameConfig.wheelOptions.forEach(option => {
+        const app = option.application;
+        const controller = option.controller;
+
+        if (app && controller) {
+            // Add to appToControllers mapping
+            if (!appToControllers[app]) {
+                appToControllers[app] = new Set();
+            }
+            appToControllers[app].add(controller);
+
+            // Add to controllerToApps mapping
+            if (!controllerToApps[controller]) {
+                controllerToApps[controller] = new Set();
+            }
+            controllerToApps[controller].add(app);
+        }
+    });
+
+    // Convert Sets to Arrays for logging and saving
+    const appToControllersLog = {};
+    const controllerToAppsLog = {};
+
+    Object.keys(appToControllers).forEach(app => {
+        appToControllersLog[app] = Array.from(appToControllers[app]);
+    });
+
+    Object.keys(controllerToApps).forEach(controller => {
+        controllerToAppsLog[controller] = Array.from(controllerToApps[controller]);
+    });
+
+    console.log('[Main] Application -> Controller Mappings:', appToControllersLog);
+    console.log('[Main] Controller -> Application Mappings:', controllerToAppsLog);
+
+    // Save mapping files next to wheel outputs
+    const sksePluginsDir = path.join(process.env.USERPROFILE, 'Documents/My Games/Skyrim Special Edition/SKSE/Plugins');
+    const appToControllersFile = path.join(sksePluginsDir, 'app-to-controllers.json');
+    const controllerToAppsFile = path.join(sksePluginsDir, 'controller-to-apps.json');
+
+    try {
+        // Ensure directory exists
+        if (!fs.existsSync(sksePluginsDir)) {
+            fs.mkdirSync(sksePluginsDir, { recursive: true });
+        }
+
+        // Write app -> controllers mapping
+        fs.writeFileSync(appToControllersFile, JSON.stringify(appToControllersLog, null, 2));
+        console.log(`[Main] Saved app-to-controllers mapping to ${appToControllersFile}`);
+
+        // Write controller -> apps mapping
+        fs.writeFileSync(controllerToAppsFile, JSON.stringify(controllerToAppsLog, null, 2));
+        console.log(`[Main] Saved controller-to-apps mapping to ${controllerToAppsFile}`);
+    } catch (error) {
+        console.warn(`[Main] Failed to save mapping files: ${error.message}`);
+    }
+
     // Initialize Mod Integration
-    modIntegration = new ModIntegration();
+    modIntegration = new ModIntegration('mod-config.json', appToControllersLog, controllerToAppsLog);
     console.log('Mod Integration initialized');
 
-    // Initialize Twitch Client
-    twitchClient = new TwitchClient();
-    twitchClient.connect();
+    // Spawn executor process
+    startExecutor();
+
+    // Initialize Twitch Client (optional - skip if credentials missing)
+    try {
+        if (process.env.TWITCH_BOT_USERNAME && process.env.TWITCH_OAUTH_TOKEN && process.env.TWITCH_CHANNEL) {
+            twitchClient = new TwitchClient();
+            twitchClient.connect();
+        } else {
+            console.log('Twitch credentials not configured - Twitch integration disabled');
+            console.log('Wheel will still auto-spin every 30 seconds');
+        }
+    } catch (error) {
+        console.warn('Failed to initialize Twitch client:', error.message);
+        console.log('Continuing without Twitch integration...');
+    }
 
     // Clear log files and event queue on startup
     clearStartupQueues();
 });
+
+function startExecutor() {
+    try {
+        const executorPath = path.join(__dirname, 'applications', GAME, 'executors', 'console-executor.py');
+        
+        if (!fs.existsSync(executorPath)) {
+            console.warn(`[Executor] Script not found at: ${executorPath}`);
+            return;
+        }
+
+        executorProcess = spawn('python', [executorPath], {
+            cwd: __dirname,
+            stdio: ['ignore', 'pipe', 'pipe'],
+            detached: false
+        });
+
+        executorProcess.stdout.on('data', (data) => {
+            console.log(`[Executor] ${data.toString().trim()}`);
+        });
+
+        executorProcess.stderr.on('data', (data) => {
+            const msg = data.toString().trim();
+            if (msg && !msg.includes('cache')) {
+                console.warn(`[Executor] ${msg}`);
+            }
+        });
+
+        executorProcess.on('error', (error) => {
+            console.error(`[Executor] Failed to start: ${error.message}`);
+        });
+
+        executorProcess.on('exit', (code) => {
+            console.log(`[Executor] Process exited with code ${code}`);
+            executorProcess = null;
+        });
+
+        console.log('[Executor] Started successfully');
+    } catch (error) {
+        console.error('[Executor] Failed to start executor:', error.message);
+    }
+}
 
 function clearStartupQueues() {
     const userProfile = process.env.USERPROFILE;
@@ -175,9 +305,24 @@ function clearStartupQueues() {
     } catch (error) {
         console.warn('Could not clear command queue:', error);
     }
+
+    // Clear AutoHotkey log
+    try {
+        if (fs.existsSync(logFile)) {
+            fs.writeFileSync(logFile, '');
+            console.log('Cleared command executor log');
+        }
+    } catch (error) {
+        console.warn('Could not clear log:', error);
+    }
 }
 
 app.on('window-all-closed', () => {
+    // Clean up executor process
+    if (executorProcess) {
+        executorProcess.kill();
+        console.log('Executor process terminated');
+    }
     if (process.platform !== 'darwin') {
         app.quit();
     }
@@ -205,32 +350,11 @@ ipcMain.on('twitch-status-request', (event) => {
 });
 
 ipcMain.handle('get-config', async () => {
-    let wheelOptions = [];
-    try {
-        const jsonPath = path.join(__dirname, 'wheel-options.json');
-        const jsonContent = fs.readFileSync(jsonPath, 'utf-8');
-        const data = JSON.parse(jsonContent);
-        wheelOptions = data.options.map(opt => opt.name);
-    } catch (error) {
-        console.error('Failed to read wheel-options.json:', error);
-        wheelOptions = [
-            'Dragons',
-            'Spiders',
-            'Fire',
-            'Ice',
-            'Lightning',
-            'Teleport to random location',
-            'Give random weapon',
-            'Spawn enemy',
-            'Apply random spell',
-            'Set difficulty to max',
-            'Give 10000 gold',
-            'Blind effect',
-            'Speed boost'
-        ];
-    }
+    // Return game-specific configuration
+    const wheelOptions = gameConfig.wheelOptions.map(opt => opt.name);
 
     return {
+        game: GAME,
         channel: process.env.TWITCH_CHANNEL || 'your_channel',
         wheelOptions: wheelOptions
     };

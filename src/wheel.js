@@ -219,13 +219,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         'Speed boost'
     ];
 
-    // Try to load options from wheel-options.json
+    // Try to load options from game-specific wheel-options.json
     try {
-        const response = await fetch('../wheel-options.json');
+        // Get game name from electron if available, default to 'skyrim'
+        const game = window.electron ? (await window.electron.getGameName?.() || 'skyrim') : 'skyrim';
+        const optionsPath = `../applications/${game}/config/wheel-options.json`;
+        
+        const response = await fetch(optionsPath);
         if (response.ok) {
             const data = await response.json();
             console.log('Raw options from JSON:', data.options);
-
+            
             // Filter out disabled options, then extract just the names
             options = data.options
                 .filter(opt => {
@@ -234,7 +238,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return isEnabled;
                 })
                 .map(opt => opt.name);
-
+            
             console.log('Final wheel options (enabled only):', options);
         }
     } catch (error) {

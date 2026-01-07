@@ -8,9 +8,8 @@
         "start": "electron .",
         "dev": "electron . --dev",
         "build": "electron-builder",
-        "build:skse": "msbuild skse-plugin/OverlayBridge.sln /p:Configuration=Release /p:Platform=x64",
-        "install:plugin": "powershell -Command \"New-Item -ItemType Directory -Path 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Skyrim Special Edition\\Data\\SKSE\\Plugins' -Force | Out-Null; Copy-Item 'skse-plugin/x64/Release/OverlayBridge.dll' 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Skyrim Special Edition\\Data\\SKSE\\Plugins\\OverlayBridge.dll' -Force\"",
-        "deploy:skse": "npm run build:skse && npm run install:plugin"
+        "pretest": "start npm start",
+        "test": "node test-wheel.js"
     },
     "author": "Your Name",
     "license": "MIT",
