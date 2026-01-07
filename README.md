@@ -143,13 +143,7 @@ The overlay executes Skyrim console commands in three ways (in order of preferen
 
 Build and deploy with: `npm run deploy:skse`
 
-### 2. AutoHotkey Script (Fallback)
-- Works without plugin build
-- **Note:** Requires game focus, interrupts gameplay
-
-Located at: `skyrim-command-executor.ahk`
-
-### 3. Python Executor (Utility)
+### 2. Python Executor (Utility)
 - Helper script for testing
 - Queues commands to file for other executors
 

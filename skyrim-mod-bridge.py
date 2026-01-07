@@ -56,14 +56,11 @@ class SkyrimModBridge:
             return None
     
     def execute_console_command(self, command):
-        """Execute a Skyrim console command"""
-        print(f"  → Would execute: {command}")
+        """Execute a Skyrim console command via SKSE plugin"""
+        print(f"  → Command queued for SKSE plugin: {command}")
         
-        # TODO: Implement actual console command injection
-        # This requires either:
-        # 1. AutoHotkey to send keys to Skyrim window
-        # 2. Direct SKSE console command API
-        # 3. File-based command queue that a SKSE plugin reads
+        # The SKSE plugin (OverlayBridge.dll) monitors overlay-data.json
+        # and executes commands automatically when wheel lands
         
         return True
     

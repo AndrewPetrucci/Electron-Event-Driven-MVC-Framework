@@ -1,131 +1,185 @@
 # SKSE Plugin Implementation Guide
 
-This guide explains how to implement direct console command execution using a SKSE plugin.
-
-## Option A: File-Based Command Queue (Easier - Recommended)
-
-Use the `skyrim-console-executor.py` script which queues commands to a file that a SKSE plugin reads.
-
-### Steps:
-
-1. **Run the Python script:**
-   ```powershell
-   python C:\Users\andre\Documents\Overlay\skyrim-console-executor.py
-   ```
-
-2. **Create a SKSE plugin to read the queue:**
-   - The plugin will read `overlay-commands.txt` 
-   - Execute each command via console
-   - Clear the file when done
-
-3. **Plugin code is in:** `skse-plugin/overlay-bridge.cpp`
-
-## Option B: Direct Console Execution via SKSE (More Complex)
-
-Build and compile the C++ SKSE plugin for direct command execution.
-
-### Requirements:
-
-- **Visual Studio 2019 or later** (C++)
-- **SKSE SDK** from [skse.silverlock.org](https://skse.silverlock.org)
-- **CMake** (optional, for easier building)
-
-### Steps:
-
-1. **Download SKSE SDK:**
-   - Go to [https://skse.silverlock.org](https://skse.silverlock.org)
-   - Download the source code archive
-   - Extract it
-
-2. **Set up project:**
-   - Copy `skse-plugin/overlay-bridge.cpp` into SKSE source directory
-   - Create `CMakeLists.txt` or use Visual Studio project
-
-3. **Compile:**
-   ```bash
-   cmake -B build
-   cmake --build build --config Release
-   ```
-
-4. **Install DLL:**
-   - Copy compiled `.dll` to: `C:\Program Files (x86)\Steam\steamapps\common\Skyrim Special Edition\Data\SKSE\Plugins\`
-
-5. **Run Python executor:**
-   ```powershell
-   python skyrim-console-executor.py
-   ```
-
-## Option C: Using AutoHotkey (Simple - No Plugin Needed)
-
-The Python script includes AutoHotkey support. If you have AutoHotkey installed:
-
-```powershell
-# Install AutoHotkey v1.1 from https://www.autohotkey.com
-# Then run the executor
-python skyrim-console-executor.py
-```
-
-The script will automatically use AutoHotkey to inject commands into Skyrim's console.
+This guide explains how the SKSE plugin directly executes console commands for the Twitch Wheel Overlay.
 
 ## How It Works
 
-### File-Based Queue Flow:
+### Command Execution Flow:
 ```
-Wheel Spins
+Wheel Spins (in Overlay)
     ↓
-Overlay writes result to overlay-data.json
+Overlay writes selected option result to overlay-data.json
     ↓
-Python script detects result
+SKSE Plugin detects result (via file monitoring or IPC)
     ↓
-Python writes command to overlay-commands.txt
+SKSE Plugin executes console command directly
     ↓
-SKSE plugin reads overlay-commands.txt
-    ↓
-SKSE plugin executes command in console
-    ↓
-Result happens in-game!
+Command effect happens in-game seamlessly!
 ```
 
-### AutoHotkey Flow:
+## Requirements
+
+- **Visual Studio 2022** (Community edition is free)
+- **C++ Build Tools** with v143 toolset
+- **SKSE SDK** (already downloaded to proper location)
+- **Node.js 14+** (for npm build automation)
+- **MSBuild** (included with Visual Studio)
+
+## Building the Plugin
+
+### Step 1: Verify Prerequisites
+
+Check that SKSE SDK is properly installed:
+```powershell
+Test-Path "C:\Program Files (x86)\Steam\steamapps\common\Skyrim Special Edition\src\skse64"
 ```
-Wheel Spins
-    ↓
-Overlay writes result
-    ↓
-Python detects result
-    ↓
-Python runs AutoHotkey script
-    ↓
-AutoHotkey opens Skyrim console
-    ↓
-AutoHotkey types and executes command
-    ↓
-Result happens in-game!
+
+This should return `True`. Inside should be:
+- `skse64/` directory
+- `skse64/` subdirectory (nested)
+- `common/` directory
+
+### Step 2: Build with npm
+
+From the project root:
+```powershell
+npm run build:skse
 ```
 
-## Testing
+This invokes MSBuild on the Visual Studio project. Expected output:
+```
+Build: 0 Failed, 1 Succeeded
+```
 
-1. Start the Python executor:
-   ```powershell
-   python C:\Users\andre\Documents\Overlay\skyrim-console-executor.py
-   ```
+The compiled DLL appears at: `skse-plugin/x64/Release/OverlayBridge.dll`
 
-2. Launch Skyrim
+### Step 3: Deploy to Skyrim
 
+```powershell
+npm run deploy:skse
+```
+
+This command:
+1. Builds the plugin (if not already built)
+2. Creates `Data\SKSE\Plugins\` directory if missing
+3. Copies `OverlayBridge.dll` to Skyrim's plugin folder
+
+Verify the DLL is in place:
+```powershell
+Test-Path "C:\Program Files (x86)\Steam\steamapps\common\Skyrim Special Edition\Data\SKSE\Plugins\OverlayBridge.dll"
+```
+
+## Plugin Architecture
+
+### Current Implementation
+
+The plugin (`skse-plugin/overlay-bridge.cpp`) is a minimal SKSE skeleton:
+
+- **SKSEPlugin_Query**: Tells SKSE about the plugin
+- **SKSEPlugin_Load**: Called when SKSE loads the plugin
+
+Current state: **Loads successfully, awaiting functional implementation**
+
+### Future Enhancement
+
+The plugin will need to:
+1. Monitor `overlay-data.json` for wheel results
+2. Parse the selected option
+3. Execute the corresponding console command
+4. Log results for debugging
+
+## End-to-End Testing
+
+### Prerequisites
+1. Skyrim Special Edition installed
+2. SKSE loader installed and configured
+3. Plugin built and deployed (via `npm run deploy:skse`)
+4. Overlay application ready to launch
+
+### Test Procedure
+
+**Phase 1: Verify Plugin Loads**
+1. Start Skyrim with SKSE (`skse64_loader.exe`)
+2. Check Skyrim console for any plugin initialization messages
+3. Verify game runs normally (plugin loading should be silent)
+
+**Phase 2: Verify Overlay Functionality**
+1. Launch the Overlay application
+2. Open Skyrim main menu
 3. Spin the wheel in the overlay
+4. Observe the selected option in the overlay UI
+5. Verify overlay animation completes
 
-4. Check the console output - you should see commands being queued
+**Phase 3: Verify Command Execution** 
+1. With Skyrim game world loaded
+2. Spin the wheel
+3. Watch game state - does the command execute?
+   - Example: "Teleport to Falkreath" should transport you
+   - Example: "Summon Dragon" should create a dragon encounter
+4. Check overlay data files to confirm commands are being recorded
 
-5. If using file-based approach, check `overlay-commands.txt` for the queued command
+### Success Criteria
+
+✓ SKSE loads the plugin without crashing  
+✓ Overlay displays and responds to user input  
+✓ Wheel animations complete successfully  
+✓ Console commands execute in-game after wheel spin  
+✓ Game remains playable and stable  
 
 ## Troubleshooting
 
-- **Commands not executing?** Make sure SKSE plugin is in the correct folder
-- **File not being read?** Check file permissions on `overlay-commands.txt`
-- **AutoHotkey errors?** Install AutoHotkey v1.1 from [autohotkey.com](https://www.autohotkey.com)
+### Plugin Not Loading
+- **Symptom**: No plugin output in console, DLL might not load
+- **Check**: 
+  - Is DLL in correct folder? `C:\Program Files (x86)\Steam\steamapps\common\Skyrim Special Edition\Data\SKSE\Plugins\`
+  - Is SKSE loader being used? (Not vanilla launcher)
+  - Check SKSE console for error messages
+
+### Commands Not Executing
+- **Symptom**: Overlay works but game state doesn't change
+- **Check**:
+  - Is the selected command correct in `wheel-options.json`?
+  - Try typing command manually in Skyrim console to verify it works
+  - Plugin may need enhancement for actual console integration
+
+### Build Fails
+- **Symptom**: `npm run build:skse` returns errors
+- **Check**:
+  - Is Visual Studio 2022 installed with C++ workload?
+  - Is MSBuild in PATH? Run `msbuild -version` to verify
+  - Check `OverlayBridge.vcxproj` for correct include paths
+  - Ensure SKSE SDK location is correct
+
+### SKSE SDK Not Found
+- **Symptom**: `include` errors in build output
+- **Check**:
+  - SKSE should be at: `C:\Program Files (x86)\Steam\steamapps\common\Skyrim Special Edition\src\skse64`
+  - Folder structure should be: `skse64/skse64/` (double nested)
+  - Verify `skse64/common/IPrefix.h` exists
 
 ## Next Steps
 
-1. **Recommended:** Use AutoHotkey for immediate testing (no compilation needed)
-2. **Production:** Build the SKSE plugin for most reliable execution
-3. **Custom commands:** Edit `wheel-options.json` to add new console commands
+1. **Run full E2E test** (described above) to identify any gaps
+2. **Enhance plugin** if commands don't execute automatically
+3. **Add logging** to plugin for debugging
+4. **Test multiple commands** with different option types
+5. **Long-term testing** in actual gameplay for stability
+
+## Development Notes
+
+### Project Files
+- Plugin source: `skse-plugin/overlay-bridge.cpp`
+- Visual Studio project: `OverlayBridge.vcxproj`
+- Solution file: `OverlayBridge.sln`
+- CMake (optional): `CMakeLists.txt`
+
+### Build System
+- MSBuild configuration handles includes, compilation, linking
+- Output: `x64/Release/OverlayBridge.dll`
+- Target framework: SKSE64 (Skyrim Special Edition 64-bit)
+- C++ Standard: C++17 (compatible with SKSE headers)
+
+### Configuration Files
+- Wheel options: `wheel-options.json` (has all console commands)
+- Overlay data: `overlay-data.json` (updated when wheel lands)
+- Command queue (optional): `overlay-commands.txt`

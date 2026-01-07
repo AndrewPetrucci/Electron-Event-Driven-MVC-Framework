@@ -175,16 +175,6 @@ function clearStartupQueues() {
     } catch (error) {
         console.warn('Could not clear command queue:', error);
     }
-
-    // Clear AutoHotkey log
-    try {
-        if (fs.existsSync(logFile)) {
-            fs.writeFileSync(logFile, '');
-            console.log('Cleared command executor log');
-        }
-    } catch (error) {
-        console.warn('Could not clear log:', error);
-    }
 }
 
 app.on('window-all-closed', () => {
