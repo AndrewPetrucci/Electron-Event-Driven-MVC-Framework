@@ -71,8 +71,19 @@ class NotepadWheelTester {
                     // No existing processes to kill
                 }
 
+                // Use a unique temp filename with timestamp in test-text folder
+                const fs = require('fs');
+                const timestamp = Date.now();
+                const testTextDir = path.join(__dirname, 'test-text');
+
+                // Ensure test-text directory exists
+                if (!fs.existsSync(testTextDir)) {
+                    fs.mkdirSync(testTextDir, { recursive: true });
+                }
+
+                const tempFile = path.join(testTextDir, `notepad-test-${timestamp}.txt`);
+
                 // Create a temporary empty file for Notepad to open
-                const tempFile = path.join(process.env.TEMP, 'notepad-test-empty.txt');
                 fs.writeFileSync(tempFile, '');
                 this.tempNotepadFile = tempFile;
                 this.log(`Created temp file for Notepad: ${tempFile}`);
@@ -622,6 +633,28 @@ ExitApp
             this.log('='.repeat(60));
             this.log('Notepad Wheel Integration - Automated Test Suite');
             this.log('='.repeat(60));
+
+            // Clean up old test files from previous runs
+            try {
+                const fs = require('fs');
+                const testTextDir = path.join(__dirname, 'test-text');
+                if (fs.existsSync(testTextDir)) {
+                    const files = fs.readdirSync(testTextDir);
+                    files.forEach(file => {
+                        if (file.startsWith('notepad-test-')) {
+                            const filePath = path.join(testTextDir, file);
+                            try {
+                                fs.unlinkSync(filePath);
+                                this.log(`Cleaned up old test file: ${file}`);
+                            } catch (e) {
+                                // File may be in use, skip
+                            }
+                        }
+                    });
+                }
+            } catch (e) {
+                this.log('Could not clean up old test files');
+            }
 
             // Set overall timeout
             const testTimeout = setTimeout(async () => {

@@ -41,33 +41,17 @@ Execute()
         ExitApp(1)
     }
     
-    ; Type "hello world" character by character to ensure proper input
-    Send("h")
-    Sleep(50)
-    Send("e")
-    Sleep(50)
-    Send("l")
-    Sleep(50)
-    Send("l")
-    Sleep(50)
-    Send("o")
-    Sleep(50)
-    Send(" ")
-    Sleep(50)
-    Send("w")
-    Sleep(50)
-    Send("o")
-    Sleep(50)
-    Send("r")
-    Sleep(50)
-    Send("l")
-    Sleep(50)
-    Send("d")
+    ; Use clipboard to paste "hello world" - much faster than typing
+    A_Clipboard := "hello world"
+    Sleep(100)
+    
+    ; Paste with Ctrl+V
+    Send("^v")
     Sleep(100)
     
     ; Press Enter to confirm
     Send("{Enter}")
-    Sleep(500)
+    Sleep(100)
     
     ExitApp(0)
 }
