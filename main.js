@@ -97,7 +97,7 @@ function createWindow() {
     // Mod integration handlers
     ipcMain.on('wheel-spin-result', (event, result) => {
         console.log('Wheel result:', result);
-        modIntegration.writeWheelResult(result);
+        // Note: Writing wheel results to file is handled by controller-specific implementations
     });
 
     ipcMain.on('get-mapped-mods', (event, wheelResult) => {
@@ -333,11 +333,18 @@ ipcMain.on('spin-wheel', (event, wheelResult) => {
                 // Execute executor.ahk with entire config object as JSON
                 const ahkScript = path.join(__dirname, 'controllers', 'autohotkey', 'executor.ahk');
                 const configJson = JSON.stringify(wheelResult.config);
+                
+                // Get the application's AutoHotkey configuration
+                const appConfig = applicationConfigs[application] || {};
+                const autohotKeyConfig = appConfig.controllers?.AutoHotkey || {};
+                const autohotKeyJson = JSON.stringify(autohotKeyConfig);
+                
                 console.log(`Executing: ${ahkScript} with config: ${configJson}`);
+                console.log(`With AutoHotkey config: ${autohotKeyJson}`);
 
                 // Use AutoHotkey executable directly, not PowerShell
                 const ahkExe = 'C:\\Program Files\\AutoHotkey\\v2\\AutoHotkey.exe';
-                spawn(ahkExe, [ahkScript, configJson], {
+                spawn(ahkExe, [ahkScript, configJson, autohotKeyJson], {
                     detached: false,
                     stdio: 'ignore'
                 }).unref();

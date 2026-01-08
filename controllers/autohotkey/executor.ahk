@@ -4,12 +4,14 @@
 ; Executes keyboard commands in the Notepad window
 ;
 ; USAGE:
-; executor.ahk <config-json>
+; executor.ahk <config-json> [additional-json]
 ; Example:
 ;   executor.ahk '{"action":"insert_text","value":"hello world"}'
+;   executor.ahk '{"action":"insert_text","value":"hello world"}' '{"extra":"data"}'
 ;
 ; PARAMETERS:
 ; A_Args[1] = config as JSON string (e.g., {"action":"send_keys","value":"^s"})
+; A_Args[2] = optional additional JSON argument
 
 A_SendMode := "Input"
 
@@ -30,10 +32,12 @@ catch Error as e
 
 ; Get config JSON from command line
 configJson := A_Args.Length >= 1 ? A_Args[1] : ""
+additionalJson := A_Args.Length >= 2 ? A_Args[2] : ""
 
 ; Write debug info to file
 FileAppend("=== Notepad Executor Started ===`n", logFile)
 FileAppend("Config JSON: " . configJson . "`n", logFile)
+FileAppend("Additional JSON: " . additionalJson . "`n", logFile)
 FileAppend("Args Count: " . A_Args.Length . "`n", logFile)
 
 ; Extract action and value from JSON using simple string parsing
