@@ -11,13 +11,28 @@
 ;
 ; PARAMETERS:
 ; A_Args[1] = config as JSON string (e.g., {"action":"send_keys","value":"^s"})
-; A_Args[2] = optional additional JSON argument
+; A_Args[2] = optional application config JSON (e.g., {"applicationName":"Notepad"})
 
 A_SendMode := "Input"
 
+; Get config JSON from command line
+configJson := A_Args.Length >= 1 ? A_Args[1] : ""
+additionalJson := A_Args.Length >= 2 ? A_Args[2] : ""
+
+; Extract applicationName from additional JSON
+applicationName := "Notepad"
+if (additionalJson != "")
+{
+    extractedName := ExtractJsonValue(additionalJson, "applicationName")
+    if (extractedName != "")
+    {
+        applicationName := extractedName
+    }
+}
+
 ; Configuration
-notepadWindowTitle := "ahk_class Notepad"
-logFile := A_Temp . "\notepad-executor-debug.log"
+applicatioWindowTitle := "ahk_class " . applicationName
+logFile := A_Temp . "\" . applicationName . "-executor-debug.log"
 
 ; Immediately write to log to confirm script is running
 try
@@ -30,12 +45,8 @@ catch Error as e
     ExitApp(1)
 }
 
-; Get config JSON from command line
-configJson := A_Args.Length >= 1 ? A_Args[1] : ""
-additionalJson := A_Args.Length >= 2 ? A_Args[2] : ""
-
 ; Write debug info to file
-FileAppend("=== Notepad Executor Started ===`n", logFile)
+FileAppend("=== " . applicationName . " Executor Started ===`n", logFile)
 FileAppend("Config JSON: " . configJson . "`n", logFile)
 FileAppend("Additional JSON: " . additionalJson . "`n", logFile)
 FileAppend("Args Count: " . A_Args.Length . "`n", logFile)
@@ -95,28 +106,19 @@ Execute(action, value)
 {
     global logFile
     
-    ; First, focus on Notepad window
+    ; First, focus on Application window
     try
     {
-        WinActivate(notepadWindowTitle)
+        WinActivate(applicatioWindowTitle)
         Sleep(500)
     }
     catch Error as e
     {
-        ; Try by class name directly
-        try
-        {
-            WinActivate("ahk_class Notepad")
-            Sleep(500)
-        }
-        catch Error as e2
-        {
-            ; Window not found, exit silently
-            ExitApp(0)
-        }
+        ; Window not found, exit silently
+        ExitApp(0)
     }
     
-    ; Verify Notepad is active
+    ; Verify Application is active
     activeTitle := WinGetTitle("A")
     
     if (!InStr(activeTitle, "Notepad") && !InStr(activeTitle, "Untitled"))
@@ -125,7 +127,7 @@ Execute(action, value)
         ExitApp(0)
     }
     
-    FileAppend("Notepad is active, executing action: " . action . "`n", logFile)
+    FileAppend("Application is active, executing action: " . action . "`n", logFile)
     
     ; Execute based on action type
     if (action = "send_keys")

@@ -187,7 +187,6 @@ app.on('ready', () => {
     }
 
     // Load configuration for each discovered application
-    const applicationConfigs = {};
     uniqueApplications.forEach(appName => {
         try {
             const configLoader = new ApplicationConfigLoader(appName);
@@ -334,8 +333,8 @@ ipcMain.on('spin-wheel', (event, wheelResult) => {
                 const ahkScript = path.join(__dirname, 'controllers', 'autohotkey', 'executor.ahk');
                 const configJson = JSON.stringify(wheelResult.config);
 
-                // Get the application's AutoHotkey configuration
-                const appConfig = applicationConfigs[application] || {};
+                // Get the application's AutoHotkey configuration (use lowercase for lookup)
+                const appConfig = applicationConfigs[application.toLowerCase()] || {};
                 const autohotKeyConfig = appConfig.controllers?.AutoHotkey || {};
                 const autohotKeyJson = JSON.stringify(autohotKeyConfig);
 

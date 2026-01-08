@@ -14,6 +14,7 @@ class ApplicationConfigLoader {
         this.executorDir = path.join(this.applicationDir, 'executors');
 
         this.wheelOptions = [];
+        this.controllers = {};
         this.modConfig = {};
     }
 
@@ -23,8 +24,9 @@ class ApplicationConfigLoader {
             if (fs.existsSync(optionsFile)) {
                 const content = fs.readFileSync(optionsFile, 'utf-8');
                 const data = JSON.parse(content);
-                // Handle both flat array and {options: []} format
+                // Handle both flat array and {options: [], controllers: {}} format
                 this.wheelOptions = Array.isArray(data) ? data : (data.options || []);
+                this.controllers = Array.isArray(data) ? {} : (data.controllers || {});
                 console.log(`[Config] Loaded ${this.wheelOptions.length} wheel options for ${this.applicationName}`);
                 return this.wheelOptions;
             } else {
@@ -76,6 +78,7 @@ class ApplicationConfigLoader {
         return {
             application: this.applicationName,
             wheelOptions: this.wheelOptions,
+            controllers: this.controllers,
             executorScript: this.getExecutorScript('console-executor.py')
         };
     }
