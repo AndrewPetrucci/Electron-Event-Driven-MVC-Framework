@@ -180,6 +180,7 @@ class ModIntegration {
 
     writeData(data) {
         try {
+            console.log('Writing data to:', this.dataPath);
             fs.writeFileSync(this.dataPath, JSON.stringify(data, null, 2));
             return true;
         } catch (error) {

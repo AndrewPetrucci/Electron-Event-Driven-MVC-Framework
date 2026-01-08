@@ -221,7 +221,7 @@ See [applications/README.md](applications/README.md) for architecture details.
 ### Framework Components (Game-Agnostic)
 
 - **UI & Wheel Logic** - `src/wheel.js` - Works with any game
-- **Config Loader** - `src/game-config-loader.js` - Dynamically loads game configs
+- **Config Loader** - `src/application-config-loader.js` - Dynamically loads application configs
 - **Electron Shell** - `main.js` - Display overlay window
 
 ### Game-Specific Components
@@ -292,7 +292,7 @@ Overlay/
 ├── src/                         # Framework core (game-agnostic)
 │   ├── index.html
 │   ├── wheel.js                 # Wheel logic
-│   ├── game-config-loader.js    # Game configuration system
+│   ├── application-config-loader.js    # Application configuration system
 │   └── ...
 ├── applications/                # Game/application-specific implementations
 │   ├── skyrim/                  # Skyrim configuration & executors

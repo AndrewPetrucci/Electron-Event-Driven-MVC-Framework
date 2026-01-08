@@ -54,13 +54,27 @@ class SpinWheel {
             });
         }
 
-        // Listen for global hotkey from main process (now disabled in favor of auto-spin)
-        // if (window.electron && window.electron.onSpinHotkey) {
-        //     window.electron.onSpinHotkey(() => {
-        //         console.log('Global hotkey received, spinning wheel');
-        //         this.spin();
-        //     });
-        // }
+        // Get auto-spin configuration from main process
+        let shouldAutoSpin = true;
+        if (window.electron && window.electron.getAutoSpinConfig) {
+            window.electron.getAutoSpinConfig().then(config => {
+                shouldAutoSpin = config;
+                this.initializeAutoSpin(shouldAutoSpin);
+            }).catch(() => {
+                // Default to true if config retrieval fails
+                this.initializeAutoSpin(true);
+            });
+        } else {
+            // Default to true if electron not available
+            this.initializeAutoSpin(true);
+        }
+    }
+
+    initializeAutoSpin(enabled) {
+        if (!enabled) {
+            console.log('[Wheel] Auto-spin is DISABLED');
+            return;
+        }
 
         // Auto-spin timer - spins every 30 seconds
         this.autoSpinTimer = setInterval(() => {
@@ -102,10 +116,11 @@ class SpinWheel {
             // Draw text
             this.ctx.save();
             this.ctx.rotate(((i * sliceAngle + sliceAngle / 2) * Math.PI) / 180);
-            this.ctx.textAlign = 'right';
+            this.ctx.rotate(Math.PI); // Flip text 180 degrees
+            this.ctx.textAlign = 'left';
             this.ctx.fillStyle = 'white';
             this.ctx.font = 'bold 14px Arial';
-            this.ctx.fillText(this.options[i], this.radius - 20, 10);
+            this.ctx.fillText(this.options[i], -this.radius + 20, 10);
             this.ctx.restore();
         }
 
@@ -166,6 +181,7 @@ class SpinWheel {
     }
 
     onSpinComplete() {
+        console.log('Spin complete at rotation:', this.rotation);
         const spinButton = document.getElementById('spinButton');
         if (spinButton) {
             spinButton.classList.remove('spinning');
@@ -219,17 +235,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         'Speed boost'
     ];
 
-    // Try to load options from game-specific wheel-options.json
+    // Try to load options from wheel-options.json
     try {
-        // Get game name from electron if available, default to 'skyrim'
-        const game = window.electron ? (await window.electron.getGameName?.() || 'skyrim') : 'skyrim';
-        const optionsPath = `../applications/${game}/config/wheel-options.json`;
-        
-        const response = await fetch(optionsPath);
-        if (response.ok) {
+        // Try in order: test config (if running tests), then root-level
+        const pathsToTry = [
+            `../wheel-options-test.json`,  // Test config (highest priority)
+            `../wheel-options.json`        // Root-level config
+        ];
+
+        let response = null;
+        let loadedPath = null;
+        let lastError = null;
+
+        for (const optionsPath of pathsToTry) {
+            try {
+                console.log(`[Wheel] Attempting to load from: ${optionsPath}`);
+                response = await fetch(optionsPath);
+                console.log(`[Wheel] Fetch response status for ${optionsPath}: ${response.status}`);
+
+                if (response.ok) {
+                    loadedPath = optionsPath;
+                    console.log(`[Wheel] Successfully loading options from: ${loadedPath}`);
+                    break;
+                } else {
+                    console.log(`[Wheel] Path not found: ${optionsPath} (status: ${response.status})`);
+                }
+            } catch (e) {
+                lastError = e;
+                console.log(`[Wheel] Error attempting ${optionsPath}:`, e.message);
+                // Continue to next path
+            }
+        }
+
+        if (response && response.ok) {
             const data = await response.json();
             console.log('Raw options from JSON:', data.options);
-            
+
             // Filter out disabled options, then extract just the names
             options = data.options
                 .filter(opt => {
@@ -238,20 +279,48 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return isEnabled;
                 })
                 .map(opt => opt.name);
-            
+
             console.log('Final wheel options (enabled only):', options);
+        } else {
+            console.warn(`[Wheel] Could not load wheel options from any path. Using default options.`);
+            if (lastError) {
+                console.warn(`[Wheel] Last error:`, lastError);
+            }
         }
     } catch (error) {
-        console.warn('Could not load wheel options from file, using defaults');
+        console.warn('Could not load wheel options from file, using defaults:', error);
     }
 
-    // Don't override with config.wheelOptions - use the JSON file with enabled flags
-    // if (window.electron) {
-    //     const config = await window.electron.getConfig();
-    //     if (config.wheelOptions) {
-    //         options = config.wheelOptions;
-    //     }
-    // }
+    // Check for spin button before initializing wheel
+    const spinButton = document.getElementById('spinButton');
+    if (spinButton) {
+        console.log('[Wheel] ✓ Spin button found in DOM');
+        console.log(`[Wheel] Spin button element:`, spinButton);
+        console.log(`[Wheel] Spin button classes:`, spinButton.className);
+        console.log(`[Wheel] Spin button text:`, spinButton.textContent);
+    } else {
+        console.error('[Wheel] ✗ SPIN BUTTON NOT FOUND! The wheel will not be interactive.');
+        console.error('[Wheel] Expected element with id="spinButton"');
+    }
 
+    // Check for canvas
+    const canvas = document.getElementById('wheelCanvas');
+    if (canvas) {
+        console.log('[Wheel] ✓ Canvas element found');
+        console.log(`[Wheel] Canvas dimensions: ${canvas.width}x${canvas.height}`);
+    } else {
+        console.error('[Wheel] ✗ CANVAS NOT FOUND! Expected element with id="wheelCanvas"');
+    }
+
+    // Check for result display
+    const resultDisplay = document.getElementById('lastResult');
+    if (resultDisplay) {
+        console.log('[Wheel] ✓ Result display element found');
+    } else {
+        console.error('[Wheel] ✗ RESULT DISPLAY NOT FOUND! Expected element with id="lastResult"');
+    }
+
+    console.log(`[Wheel] Creating SpinWheel with ${options.length} options`);
     window.wheel = new SpinWheel('wheelCanvas', options);
+    console.log('[Wheel] ✓ SpinWheel instance created successfully');
 });

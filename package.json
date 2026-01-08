@@ -7,8 +7,9 @@
     "scripts": {
         "start": "electron .",
         "dev": "electron . --dev",
+        "start:no-spin": "cross-env AUTO_SPIN=false npm start",
         "build": "electron-builder",
-        "pretest": "start npm start",
+        "pretest": "start npm run start:no-spin",
         "test": "node test-wheel.js"
     },
     "author": "Your Name",
@@ -17,6 +18,7 @@
         "tmi.js": "^1.8.5"
     },
     "devDependencies": {
+        "cross-env": "^10.1.0",
         "electron": "latest",
         "electron-builder": "latest"
     }

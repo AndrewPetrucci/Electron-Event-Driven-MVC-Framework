@@ -5,7 +5,7 @@
 
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const GameConfigLoader = require('./src/game-config-loader');
+const ApplicationConfigLoader = require('./src/application-config-loader');
 
 let mainWindow;
 let testMode = true;
@@ -15,7 +15,7 @@ app.on('ready', () => {
     console.log('[TEST] Electron app ready');
 
     // Load game configuration
-    const configLoader = new GameConfigLoader();
+    const configLoader = new ApplicationConfigLoader();
     const gameConfig = configLoader.loadAll();
 
     // Create main window
@@ -56,7 +56,7 @@ app.on('ready', () => {
 
 // IPC handlers for wheel data
 ipcMain.handle('get-config', (event) => {
-    const configLoader = new GameConfigLoader();
+    const configLoader = new ApplicationConfigLoader();
     return configLoader.loadAll();
 });
 

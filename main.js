@@ -4,16 +4,17 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 const TwitchClient = require('./src/twitch');
 const ModIntegration = require('./src/mod-integration');
-const GameConfigLoader = require('./src/game-config-loader');
+const ApplicationConfigLoader = require('./src/application-config-loader');
 
 let mainWindow;
 let twitchClient;
 let modIntegration;
 let gameConfig;
-let executorProcess;
+let applicationConfigs = {};
 
-// Get game from environment or default to skyrim
-const GAME = process.env.GAME || 'skyrim';
+// Get auto-spin setting from environment (default: true)
+// Set AUTO_SPIN=false or --disable-auto-spin to disable
+const AUTO_SPIN = process.env.AUTO_SPIN !== 'false' && !process.argv.includes('--disable-auto-spin');
 
 const WINDOW_WIDTH = 600;
 const WINDOW_HEIGHT = 600;
@@ -135,7 +136,11 @@ function createWindow() {
     });
 
     ipcMain.handle('get-game-name', () => {
-        return GAME;
+        return null; // No default application
+    });
+
+    ipcMain.handle('get-auto-spin-config', () => {
+        return AUTO_SPIN;
     });
 
     ipcMain.on('minimize-window', () => {
@@ -159,17 +164,55 @@ function createWindow() {
 app.on('ready', () => {
     createWindow();
 
-    // Load game-specific configuration
-    const configLoader = new GameConfigLoader(GAME);
-    gameConfig = configLoader.loadAll();
-    console.log(`[Main] Using game: ${GAME}`);
-    console.log(`[Main] Loaded ${gameConfig.wheelOptions.length} wheel options`);
+    // Load master wheel-options.json to discover applications
+    const wheelOptionsPath = path.join(__dirname, 'wheel-options.json');
+    let allWheelOptions = [];
+    let uniqueApplications = new Set();
+
+    try {
+        const wheelOptionsContent = fs.readFileSync(wheelOptionsPath, 'utf-8');
+        const wheelOptionsData = JSON.parse(wheelOptionsContent);
+        allWheelOptions = Array.isArray(wheelOptionsData) ? wheelOptionsData : (wheelOptionsData.options || []);
+
+        // Extract unique applications
+        allWheelOptions.forEach(option => {
+            if (option.application) {
+                uniqueApplications.add(option.application.toLowerCase());
+            }
+        });
+
+        console.log(`[Main] Discovered applications: ${Array.from(uniqueApplications).join(', ')}`);
+    } catch (error) {
+        console.warn(`[Main] Failed to load wheel-options.json: ${error.message}`);
+    }
+
+    // Load configuration for each discovered application
+    const applicationConfigs = {};
+    uniqueApplications.forEach(appName => {
+        try {
+            const configLoader = new ApplicationConfigLoader(appName);
+            applicationConfigs[appName] = configLoader.loadAll();
+            console.log(`[Main] Loaded configuration for application: ${appName}`);
+        } catch (error) {
+            console.warn(`[Main] Failed to load config for ${appName}: ${error.message}`);
+        }
+    });
+
+    // Use first discovered application as reference (or null if none)
+    gameConfig = Object.values(applicationConfigs)[0] || {
+        wheelOptions: allWheelOptions,
+        executorScript: null
+    };
+
+    console.log(`[Main] Loaded configuration for ${uniqueApplications.size} application(s): ${Array.from(uniqueApplications).join(', ')}`);
+    console.log(`[Main] Total wheel options: ${allWheelOptions.length}`);
+    console.log(`[Main] System is application-agnostic - applications defined by wheel-options.json`);
 
     // Build application -> controller and controller -> application mappings
     const appToControllers = {};  // app -> Set<controllers>
     const controllerToApps = {}; // controller -> Set<apps>
 
-    gameConfig.wheelOptions.forEach(option => {
+    allWheelOptions.forEach(option => {
         const app = option.application;
         const controller = option.controller;
 
@@ -203,15 +246,16 @@ app.on('ready', () => {
     console.log('[Main] Application -> Controller Mappings:', appToControllersLog);
     console.log('[Main] Controller -> Application Mappings:', controllerToAppsLog);
 
-    // Save mapping files next to wheel outputs
-    const sksePluginsDir = path.join(process.env.USERPROFILE, 'Documents/My Games/Skyrim Special Edition/SKSE/Plugins');
-    const appToControllersFile = path.join(sksePluginsDir, 'app-to-controllers.json');
-    const controllerToAppsFile = path.join(sksePluginsDir, 'controller-to-apps.json');
+    // Save mapping files to application data directory (not game-specific)
+    const appDataDir = path.join(process.env.APPDATA, 'TwitchWheel');
+    const appToControllersFile = path.join(appDataDir, 'app-to-controllers.json');
+    const controllerToAppsFile = path.join(appDataDir, 'controller-to-apps.json');
 
     try {
         // Ensure directory exists
-        if (!fs.existsSync(sksePluginsDir)) {
-            fs.mkdirSync(sksePluginsDir, { recursive: true });
+        if (!fs.existsSync(appDataDir)) {
+            fs.mkdirSync(appDataDir, { recursive: true });
+            console.log(`[Main] Created application data directory: ${appDataDir}`);
         }
 
         // Write app -> controllers mapping
@@ -229,9 +273,6 @@ app.on('ready', () => {
     modIntegration = new ModIntegration('mod-config.json', appToControllersLog, controllerToAppsLog);
     console.log('Mod Integration initialized');
 
-    // Spawn executor process
-    startExecutor();
-
     // Initialize Twitch Client (optional - skip if credentials missing)
     try {
         if (process.env.TWITCH_BOT_USERNAME && process.env.TWITCH_OAUTH_TOKEN && process.env.TWITCH_CHANNEL) {
@@ -239,7 +280,8 @@ app.on('ready', () => {
             twitchClient.connect();
         } else {
             console.log('Twitch credentials not configured - Twitch integration disabled');
-            console.log('Wheel will still auto-spin every 30 seconds');
+            const spinStatus = AUTO_SPIN ? 'Auto-spin enabled' : 'Auto-spin disabled';
+            console.log(`[Main] ${spinStatus} (configurable via AUTO_SPIN environment variable)`);
         }
     } catch (error) {
         console.warn('Failed to initialize Twitch client:', error.message);
@@ -249,47 +291,6 @@ app.on('ready', () => {
     // Clear log files and event queue on startup
     clearStartupQueues();
 });
-
-function startExecutor() {
-    try {
-        const executorPath = path.join(__dirname, 'applications', GAME, 'executors', 'console-executor.py');
-        
-        if (!fs.existsSync(executorPath)) {
-            console.warn(`[Executor] Script not found at: ${executorPath}`);
-            return;
-        }
-
-        executorProcess = spawn('python', [executorPath], {
-            cwd: __dirname,
-            stdio: ['ignore', 'pipe', 'pipe'],
-            detached: false
-        });
-
-        executorProcess.stdout.on('data', (data) => {
-            console.log(`[Executor] ${data.toString().trim()}`);
-        });
-
-        executorProcess.stderr.on('data', (data) => {
-            const msg = data.toString().trim();
-            if (msg && !msg.includes('cache')) {
-                console.warn(`[Executor] ${msg}`);
-            }
-        });
-
-        executorProcess.on('error', (error) => {
-            console.error(`[Executor] Failed to start: ${error.message}`);
-        });
-
-        executorProcess.on('exit', (code) => {
-            console.log(`[Executor] Process exited with code ${code}`);
-            executorProcess = null;
-        });
-
-        console.log('[Executor] Started successfully');
-    } catch (error) {
-        console.error('[Executor] Failed to start executor:', error.message);
-    }
-}
 
 function clearStartupQueues() {
     const userProfile = process.env.USERPROFILE;
@@ -318,11 +319,6 @@ function clearStartupQueues() {
 }
 
 app.on('window-all-closed', () => {
-    // Clean up executor process
-    if (executorProcess) {
-        executorProcess.kill();
-        console.log('Executor process terminated');
-    }
     if (process.platform !== 'darwin') {
         app.quit();
     }
@@ -350,12 +346,15 @@ ipcMain.on('twitch-status-request', (event) => {
 });
 
 ipcMain.handle('get-config', async () => {
-    // Return game-specific configuration
-    const wheelOptions = gameConfig.wheelOptions.map(opt => opt.name);
+    // Return available applications and their wheel options
+    const wheelOptionsMap = {};
+    Object.entries(applicationConfigs).forEach(([appName, config]) => {
+        wheelOptionsMap[appName] = config.wheelOptions ? config.wheelOptions.map(opt => opt.name) : [];
+    });
 
     return {
-        game: GAME,
-        channel: process.env.TWITCH_CHANNEL || 'your_channel',
-        wheelOptions: wheelOptions
+        applications: Array.from(uniqueApplications),
+        wheelOptions: wheelOptionsMap,
+        channel: process.env.TWITCH_CHANNEL || 'your_channel'
     };
 });

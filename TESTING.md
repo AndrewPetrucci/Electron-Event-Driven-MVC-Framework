@@ -73,7 +73,7 @@ Aggregates results and creates report
 - **test-wheel.js** - Main test harness
 - **electron-test-main.js** - Electron app in test mode
 - Uses existing files:
-  - game-config-loader.js for configuration
+  - application-config-loader.js for configuration
   - applications/skyrim/executors/console-executor.py for command execution
 
 ## Troubleshooting
