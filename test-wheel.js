@@ -706,47 +706,7 @@ ExitApp
                 this.log(`Waiting for auto-spin to trigger (up to ${WHEEL_SPIN_WAIT / 1000}s)...`);
                 await new Promise(resolve => setTimeout(resolve, WHEEL_SPIN_WAIT));
 
-                // Manually run the notepad executor to simulate the wheel command execution
-                // Get the "Hello World" option from loaded options
-                const helloWorldOption = this.wheelOptions.find(opt => opt.name === 'Hello World');
-                if (helloWorldOption && helloWorldOption.config) {
-                    this.log('Manually triggering Notepad executor with Hello World config...');
-                    const notepadExecutorPath = path.join(__dirname, 'controllers', 'autohotkey', 'executor.ahk');
-
-                    if (fs.existsSync(notepadExecutorPath)) {
-                        const configJson = JSON.stringify(helloWorldOption.config);
-
-                        this.log(`Executing executor.ahk with config: ${configJson}`);
-
-                        // Use AutoHotkey from PATH (since we added it to PATH)
-                        const ahkExePath = 'AutoHotkey.exe';
-                        const ahkProcess = spawn(ahkExePath, [notepadExecutorPath, configJson], {
-                            detached: false
-                        });
-
-                        await new Promise((resolve) => {
-                            ahkProcess.on('exit', (code) => {
-                                this.log(`Notepad executor exited with code ${code}`);
-                                resolve();
-                            });
-
-                            setTimeout(() => {
-                                try {
-                                    ahkProcess.kill();
-                                } catch (e) {
-                                    // Already exited
-                                }
-                                resolve();
-                            }, 5000);
-                        });
-                    } else {
-                        this.logError(`Notepad executor not found at ${notepadExecutorPath}`);
-                    }
-                } else {
-                    this.logError('Hello World option not found in wheel configuration');
-                }
-
-                // Now check if text was inserted
+                // Check if text was inserted by auto-spin
                 await this.detectInsertedText();
             } finally {
                 clearTimeout(testTimeout);

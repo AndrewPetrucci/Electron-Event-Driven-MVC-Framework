@@ -1,0 +1,52 @@
+{
+  "options": [
+    {
+      "name": "Insert Timestamp",
+      "command": "insert_timestamp",
+      "description": "Insert current date and time",
+      "enabled": false,
+      "application": "Notepad",
+      "controller": "AutoHotkey",
+      "config": {
+        "action": "send_keys",
+        "value": "^+t"
+      }
+    },
+    {
+      "name": "Save File",
+      "command": "save_file",
+      "description": "Save the current document",
+      "enabled": false,
+      "application": "Notepad",
+      "controller": "AutoHotkey",
+      "config": {
+        "action": "send_keys",
+        "value": "^s"
+      }
+    },
+    {
+      "name": "New File",
+      "command": "new_file",
+      "description": "Create a new document",
+      "enabled": false,
+      "application": "Notepad",
+      "controller": "AutoHotkey",
+      "config": {
+        "action": "send_keys",
+        "value": "^n"
+      }
+    },
+    {
+      "name": "Hello World",
+      "command": "hello_world",
+      "description": "Insert Hello World text",
+      "enabled": true,
+      "application": "Notepad",
+      "controller": "AutoHotkey",
+      "config": {
+        "action": "insert_text",
+        "value": "hello world"
+      }
+    }
+  ]
+}

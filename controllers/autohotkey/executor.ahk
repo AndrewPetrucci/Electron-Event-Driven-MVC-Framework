@@ -48,15 +48,29 @@ Execute(action, value)
 
 ; Helper function to extract a value from JSON string
 ; Uses Chr(34) for double quote to avoid escaping issues
+; Handles JSON with or without spaces around colons
 ExtractJsonValue(jsonStr, keyName)
 {
     quote := Chr(34)  ; Double quote character
-    colon := ":"
     
-    ; Build search pattern: "keyName":"
-    searchKey := quote . keyName . quote . colon . quote
-    
+    ; Try format without spaces first: "keyName":"
+    searchKey := quote . keyName . quote . ":" . quote
     pos := InStr(jsonStr, searchKey)
+    
+    ; If not found, try format with spaces: "keyName" : "
+    if (pos <= 0)
+    {
+        searchKey := quote . keyName . quote . " : " . quote
+        pos := InStr(jsonStr, searchKey)
+    }
+    
+    ; If still not found, try with just spaces before colon: "keyName" :"
+    if (pos <= 0)
+    {
+        searchKey := quote . keyName . quote . " :" . quote
+        pos := InStr(jsonStr, searchKey)
+    }
+    
     if (pos <= 0)
         return ""
     

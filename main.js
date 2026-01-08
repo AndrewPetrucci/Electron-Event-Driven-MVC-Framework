@@ -347,12 +347,9 @@ ipcMain.on('spin-wheel', (event, wheelResult) => {
                 const configJson = JSON.stringify(wheelResult.config);
                 console.log(`Executing: ${ahkScript} with config: ${configJson}`);
 
-                spawn('powershell.exe', [
-                    '-NoProfile',
-                    '-ExecutionPolicy', 'Bypass',
-                    '-File', ahkScript,
-                    configJson
-                ], {
+                // Use AutoHotkey executable directly, not PowerShell
+                const ahkExe = 'C:\\Program Files\\AutoHotkey\\v2\\AutoHotkey.exe';
+                spawn(ahkExe, [ahkScript, configJson], {
                     detached: false,
                     stdio: 'ignore'
                 }).unref();

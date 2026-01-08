@@ -1,18 +1,6 @@
 {
   "result": "Hello World",
-  "timestamp": "2026-01-08T16:17:15.741Z",
+  "timestamp": "2026-01-08T16:42:08.082Z",
   "mods": [],
-  "actions": [],
-  "wheelOption": {
-    "name": "Hello World",
-    "command": "hello_world",
-    "description": "Insert Hello World text",
-    "enabled": true,
-    "application": "Notepad",
-    "controller": "AutoHotkey",
-    "config": {
-      "action": "insert_text",
-      "value": "hello world"
-    }
-  }
+  "actions": []
 }
