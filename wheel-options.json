@@ -1,28 +1,16 @@
 {
     "options": [
         {
-            "name": "Insert Timestamp",
-            "command": "insert_timestamp",
-            "description": "Insert current date and time",
+            "name": "Teleport to Whiterun",
+            "command": "coc Whiterun",
+            "description": "Teleport to Whiterun",
             "enabled": true,
-            "application": "Notepad",
-            "controller": "AutoHotkey"
-        },
-        {
-            "name": "Save File",
-            "command": "save_file",
-            "description": "Save the current document",
-            "enabled": true,
-            "application": "Notepad",
-            "controller": "AutoHotkey"
-        },
-        {
-            "name": "New File",
-            "command": "new_file",
-            "description": "Create a new document",
-            "enabled": true,
-            "application": "Notepad",
-            "controller": "AutoHotkey"
+            "application": "skyrim",
+            "controller": "AutoHotkey",
+            "config": {
+                "action": "send_keys",
+                "value": "~coc Whiterun{Enter}"
+            }
         }
     ]
 }

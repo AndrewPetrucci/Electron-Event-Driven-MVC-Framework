@@ -6,7 +6,11 @@
             "description": "Teleport to Whiterun",
             "enabled": true,
             "application": "skyrim",
-            "controller": "AutoHotkey"
+            "controller": "AutoHotkey",
+            "config": {
+                "action": "send_keys",
+                "value": "~coc Whiterun{Enter}"
+            }
         },
         {
             "name": "Teleport to Solitude",
@@ -14,7 +18,11 @@
             "description": "Teleport to Solitude",
             "enabled": true,
             "application": "skyrim",
-            "controller": "AutoHotkey"
+            "controller": "AutoHotkey",
+            "config": {
+                "action": "send_keys",
+                "value": "~coc Solitude{Enter}"
+            }
         }
     ]
 }

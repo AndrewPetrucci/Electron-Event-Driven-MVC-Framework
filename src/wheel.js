@@ -1,8 +1,9 @@
 class SpinWheel {
-    constructor(canvasId, options = []) {
+    constructor(canvasId, options = [], optionObjects = []) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext('2d');
-        this.options = options;
+        this.options = options; // Array of option names (for display)
+        this.optionObjects = optionObjects; // Full option objects (for execution)
         this.rotation = 0;
         this.isSpinning = false;
         this.spinVelocity = 0;
@@ -192,6 +193,7 @@ class SpinWheel {
         const sliceAngle = 360 / this.options.length;
         const winningIndex = Math.floor(normalizedRotation / sliceAngle) % this.options.length;
         const winner = this.options[winningIndex];
+        const winnerObject = this.optionObjects[winningIndex];
 
         // Update UI
         this.updateResult(winner);
@@ -201,9 +203,9 @@ class SpinWheel {
             modClient.onWheelSpin(winner);
         }
 
-        // Send to main process
+        // Send full option object to main process (includes config)
         if (window.electron) {
-            window.electron.spinWheel(winner);
+            window.electron.spinWheel(winnerObject || { name: winner });
         }
     }
 
@@ -271,16 +273,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             const data = await response.json();
             console.log('Raw options from JSON:', data.options);
 
-            // Filter out disabled options, then extract just the names
-            options = data.options
-                .filter(opt => {
-                    const isEnabled = opt.enabled !== false;
-                    console.log(`Option "${opt.name}" - enabled: ${opt.enabled}, will render: ${isEnabled}`);
-                    return isEnabled;
-                })
-                .map(opt => opt.name);
+            // Filter enabled options and create two arrays: names and full objects
+            const enabledOptions = data.options.filter(opt => {
+                const isEnabled = opt.enabled !== false;
+                console.log(`Option "${opt.name}" - enabled: ${opt.enabled}, will render: ${isEnabled}`);
+                return isEnabled;
+            });
+
+            options = enabledOptions.map(opt => opt.name);
+            const optionObjects = enabledOptions;
 
             console.log('Final wheel options (enabled only):', options);
+            console.log('Final wheel option objects:', optionObjects);
+
+            // Create wheel with both names and full objects
+            window.wheel = new SpinWheel('wheelCanvas', options, optionObjects);
+            return; // Skip the default initialization below
         } else {
             console.warn(`[Wheel] Could not load wheel options from any path. Using default options.`);
             if (lastError) {

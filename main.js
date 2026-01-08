@@ -336,12 +336,36 @@ ipcMain.on('spin-wheel', (event, wheelResult) => {
     try {
         console.log('Wheel spun! Result:', wheelResult);
 
+        // wheelResult is now the full option object with config
+        if (wheelResult.config) {
+            // Determine which executor to use based on application
+            const application = wheelResult.application || 'Notepad';
+
+            if (application === 'Notepad') {
+                // Execute notepad-executor.ahk with entire config object as JSON
+                const ahkScript = path.join(__dirname, 'controllers', 'autohotkey', 'notepad-executor.ahk');
+                const configJson = JSON.stringify(wheelResult.config);
+                console.log(`Executing: ${ahkScript} with config: ${configJson}`);
+
+                spawn('powershell.exe', [
+                    '-NoProfile',
+                    '-ExecutionPolicy', 'Bypass',
+                    '-File', ahkScript,
+                    configJson
+                ], {
+                    detached: false,
+                    stdio: 'ignore'
+                }).unref();
+            }
+        }
+
         // TODO: Send to Skyrim mod via HTTP or file I/O
         // For now, just broadcast back to renderer
         if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('spin-result', wheelResult);
+            mainWindow.webContents.send('spin-result', wheelResult.name || wheelResult);
         }
     } catch (error) {
+        console.error('Error handling spin-wheel:', error);
         // Silently handle errors (e.g., broken pipe, closed window)
         // Don't crash the process
     }

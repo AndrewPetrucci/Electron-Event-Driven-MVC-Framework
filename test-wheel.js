@@ -31,16 +31,30 @@ class NotepadWheelTester {
             actualText: ''
         };
         this.expectedText = 'hello world';
-        this.wheelOptions = [
-            {
-                name: 'Type Hello World',
-                description: 'Type hello world using AutoHotkey',
-                command: 'type_hello',
-                enabled: true,
-                application: 'Notepad',
-                controller: 'AutoHotkey'
-            }
-        ];
+
+        // Load wheel options from the actual Notepad config
+        const notepadConfigPath = path.join(__dirname, 'applications', 'notepad', 'config', 'wheel-options.json');
+        try {
+            const configData = JSON.parse(fs.readFileSync(notepadConfigPath, 'utf-8'));
+            this.wheelOptions = configData.options;
+        } catch (error) {
+            console.error(`Warning: Could not load notepad config from ${notepadConfigPath}:`, error.message);
+            // Fallback to default test options
+            this.wheelOptions = [
+                {
+                    name: 'Hello World',
+                    description: 'Insert Hello World text',
+                    command: 'hello_world',
+                    enabled: true,
+                    application: 'Notepad',
+                    controller: 'AutoHotkey',
+                    config: {
+                        action: 'insert_text',
+                        text: 'hello world'
+                    }
+                }
+            ];
+        }
     }
 
     log(message, type = 'INFO') {
@@ -599,9 +613,9 @@ ExitApp
 
     printReport() {
         console.log('\n');
-        console.log('═══════════════════════════════════════════════════════════════');
-        console.log('                 NOTEPAD WHEEL TEST REPORT                     ');
-        console.log('═══════════════════════════════════════════════════════════════');
+        console.log('============================================================');
+        console.log('                 NOTEPAD WHEEL TEST REPORT                 ');
+        console.log('============================================================');
         console.log(`Notepad Started:           ${this.testResults.notepadStarted ? '✓ YES' : '✗ NO'}`);
         console.log(`Wheel Overlay Displayed:   ${this.testResults.wheelDisplayed ? '✓ YES' : '✗ NO'}`);
         console.log(`Wheel Configured:          ${this.testResults.wheelConfigured ? '✓ YES (1 option)' : '✗ NO'}`);
@@ -623,7 +637,7 @@ ExitApp
             });
         }
 
-        console.log('═══════════════════════════════════════════════════════════════\n');
+        console.log('============================================================\n');
 
         return failCount === 0;
     }
@@ -693,32 +707,43 @@ ExitApp
                 await new Promise(resolve => setTimeout(resolve, WHEEL_SPIN_WAIT));
 
                 // Manually run the notepad executor to simulate the wheel command execution
-                this.log('Manually triggering Notepad executor to simulate wheel command...');
-                const notepadExecutorPath = path.join(__dirname, 'controllers', 'autohotkey', 'notepad-executor.ahk');
-                if (fs.existsSync(notepadExecutorPath)) {
-                    // Use full path to AutoHotkey v2
-                    const ahkExePath = 'C:\\Program Files\\AutoHotkey\\v2\\AutoHotkey.exe';
-                    const ahkProcess = spawn(ahkExePath, [notepadExecutorPath], {
-                        detached: false
-                    });
+                // Get the "Hello World" option from loaded options
+                const helloWorldOption = this.wheelOptions.find(opt => opt.name === 'Hello World');
+                if (helloWorldOption && helloWorldOption.config) {
+                    this.log('Manually triggering Notepad executor with Hello World config...');
+                    const notepadExecutorPath = path.join(__dirname, 'controllers', 'autohotkey', 'notepad-executor.ahk');
 
-                    await new Promise((resolve) => {
-                        ahkProcess.on('exit', () => {
-                            this.log('Notepad executor completed');
-                            resolve();
+                    if (fs.existsSync(notepadExecutorPath)) {
+                        const configJson = JSON.stringify(helloWorldOption.config);
+
+                        this.log(`Executing notepad-executor.ahk with config: ${configJson}`);
+
+                        // Use full path to AutoHotkey v2
+                        const ahkExePath = 'C:\\Program Files\\AutoHotkey\\v2\\AutoHotkey.exe';
+                        const ahkProcess = spawn(ahkExePath, [notepadExecutorPath, configJson], {
+                            detached: false
                         });
 
-                        setTimeout(() => {
-                            try {
-                                ahkProcess.kill();
-                            } catch (e) {
-                                // Already exited
-                            }
-                            resolve();
-                        }, 5000);
-                    });
+                        await new Promise((resolve) => {
+                            ahkProcess.on('exit', (code) => {
+                                this.log(`Notepad executor exited with code ${code}`);
+                                resolve();
+                            });
+
+                            setTimeout(() => {
+                                try {
+                                    ahkProcess.kill();
+                                } catch (e) {
+                                    // Already exited
+                                }
+                                resolve();
+                            }, 5000);
+                        });
+                    } else {
+                        this.logError(`Notepad executor not found at ${notepadExecutorPath}`);
+                    }
                 } else {
-                    this.logError(`Notepad executor not found at ${notepadExecutorPath}`);
+                    this.logError('Hello World option not found in wheel configuration');
                 }
 
                 // Now check if text was inserted
