@@ -1,4 +1,7 @@
 {
+    "controllers": {
+        "AutoHotkey": {}
+    },
     "options": [
         {
             "name": "Insert Timestamp",
