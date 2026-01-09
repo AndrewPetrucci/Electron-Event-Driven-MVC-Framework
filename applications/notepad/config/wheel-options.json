@@ -1,7 +1,9 @@
 {
     "controllers": {
         "AutoHotkey": {
-            "applicationName": "Notepad"
+            "notepad": {
+                "applicationName": "Notepad"
+            }
         }
     },
     "options": [

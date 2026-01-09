@@ -1,9 +1,11 @@
 {
     "controllers": {
         "AutoHotkey": {
-            "applicationName": "Skyrim Special Edition",
-            "consoleOpen": "`",
-            "consoleClose": "`"
+            "skyrim": {
+                "applicationName": "Skyrim Special Edition",
+                "consoleOpen": "`",
+                "consoleClose": "`"
+            }
         }
     },
     "options": [

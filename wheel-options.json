@@ -1,34 +1,101 @@
 {
     "controllers": {
         "AutoHotkey": {
-            "applicationName": "Skyrim Special Edition",
-            "consoleOpen": "`",
-            "consoleClose": "`"
+            "notepad": {
+                "applicationName": "Notepad"
+            }
         }
     },
     "options": [
         {
-            "name": "Teleport to Whiterun",
-            "command": "coc Whiterun",
-            "description": "Teleport to Whiterun",
-            "enabled": true,
-            "application": "Skyrim",
+            "name": "Insert Timestamp",
+            "command": "insert_timestamp",
+            "description": "Insert current date and time",
+            "enabled": false,
+            "application": "Notepad",
             "controller": "AutoHotkey",
+            "color": "rgba(255, 107, 107, 0.6)",
             "config": {
-                "action": "insert_text",
-                "value": "coc Whiterun{Enter}"
+                "action": "send_keys",
+                "value": "^+t"
             }
         },
         {
-            "name": "Spawn Dragons",
-            "command": "spawn_draggons",
-            "description": "Spawns Three Dragons",
+            "name": "Save File",
+            "command": "save_file",
+            "description": "Save the current document",
+            "enabled": false,
+            "application": "Notepad",
+            "controller": "AutoHotkey",
+            "color": "rgba(78, 205, 196, 0.6)",
+            "config": {
+                "action": "send_keys",
+                "value": "^s"
+            }
+        },
+        {
+            "name": "New File",
+            "command": "new_file",
+            "description": "Create a new document",
+            "enabled": false,
+            "application": "Notepad",
+            "color": "rgba(69, 183, 209, 0.6)",
+            "controller": "AutoHotkey",
+            "config": {
+                "action": "send_keys",
+                "value": "^n"
+            }
+        },
+        {
+            "name": "Hello World",
+            "command": "hello_world",
+            "description": "Insert Hello World text",
             "enabled": true,
-            "application": "Skyrim",
+            "application": "Notepad",
+            "color": "rgba(255, 160, 122, 0.6)",
             "controller": "AutoHotkey",
             "config": {
                 "action": "insert_text",
-                "value": "player.placeatme F77F8 3{Enter}"
+                "value": "hello world\n"
+            }
+        },
+        {
+            "name": "New Line",
+            "command": "new_line",
+            "description": "Insert a new line",
+            "enabled": true,
+            "application": "Notepad",
+            "color": "rgba(186, 85, 211, 0.6)",
+            "controller": "AutoHotkey",
+            "config": {
+                "action": "insert_text",
+                "value": "\n"
+            }
+        },
+        {
+            "name": "Frogs",
+            "command": "frogs",
+            "description": "ascii Frogs",
+            "enabled": true,
+            "application": "Notepad",
+            "color": "rgba(76, 175, 80, 0.6)",
+            "controller": "AutoHotkey",
+            "config": {
+                "action": "insert_text",
+                "value": "              _         _\n  __   ___.--'_`.     .'_`--.___   __\n ( _`.'. -   'o` )   ( 'o`   - .`.'_ )\n _\\.'_'      _.-'     `-._      `_`./_\n( \\`. )    //\\`         '/\\\\    ( .'/ )\n \\_`-'`---'\\\\__,       ,__//`---'`-'_/\n  \\`        `-\\         /-'        '/\n   `                               '   VK\n"
+            }
+        },
+        {
+            "name": "Fish",
+            "command": "fish",
+            "description": "ascii Fish",
+            "enabled": true,
+            "application": "Notepad",
+            "color": "rgba(33, 150, 243, 0.6)",
+            "controller": "AutoHotkey",
+            "config": {
+                "action": "insert_text",
+                "value": "     |\\    o\n    |  \\    o\n|\\ /    .\\ o\n| |       (\n|/ \\     /\n    |  /\n     |/\n"
             }
         }
     ]
