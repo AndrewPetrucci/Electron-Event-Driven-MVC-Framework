@@ -67,7 +67,7 @@
                     "name": "New Line",
                     "command": "new_line",
                     "description": "Insert a new line",
-                    "enabled": true,
+                    "enabled": false,
                     "application": "Notepad",
                     "color": "rgba(186, 85, 211, 0.6)",
                     "controller": "AutoHotkey",

@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Twitch Wheel Overlay</title>
+    <link rel="stylesheet" href="../../shared/window-bar.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -15,7 +16,7 @@
             <button class="spin-button interactive-overlay-element" id="spinButton">SPIN</button>
         </div>
 
-        <div class="info-panel interactive-overlay-element" id="windowBar">
+        <div class="info-panel interactive-overlay-element" id="windowBar" data-window-bar>
             <span id="lastResult">Waiting for spin</span>
             <div class="button-continer">
                 <span id="chatStatus">Connecting to Twitch...</span>
@@ -25,9 +26,9 @@
         </div>
     </div>
 
+    <script src="../../shared/window-bar.js"></script>
     <script src="wheel.js"></script>
     <script src="twitch-client.js"></script>
-    <script src="window-bar.js"></script>
     <script src="mod-client.js"></script>
 </body>
 

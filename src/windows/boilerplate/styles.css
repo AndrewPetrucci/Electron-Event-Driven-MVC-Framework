@@ -24,14 +24,6 @@ body {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
 }
 
-.container {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    position: relative;
-}
-
 .content {
     flex: 1;
     display: flex;
@@ -80,52 +72,45 @@ body {
 }
 
 .control-panel {
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
-    padding: 10px;
-    background: rgba(20, 20, 40, 0.8);
-    backdrop-filter: blur(10px);
-    border-radius: 8px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: grab;
+    user-select: none;
+}
+
+.control-panel.dragging {
+    cursor: grabbing;
+    background: #f9f9f9;
 }
 
 .button-container {
     display: flex;
-    gap: 8px;
+    gap: 6px;
 }
 
-.window-btn {
-    width: auto;
-    height: auto;
-    padding: 8px 12px;
-    border: 1px solid rgba(102, 126, 234, 0.3);
-    background: rgba(102, 126, 234, 0.2);
-    color: #667eea;
-    cursor: pointer;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 5px;
-    transition: all 0.2s;
-}
 
 .window-btn:hover {
-    background: rgba(102, 126, 234, 0.4);
-    color: #8fa3ff;
+    background: #f5f5f5;
+    border-color: #999;
+    color: #000;
 }
 
 .window-btn:active {
-    background: rgba(102, 126, 234, 0.6);
-    transform: scale(0.95);
+    background: #e8e8e8;
+    transform: scale(0.96);
+}
+
+.minimize-btn:hover {
+    background: #f0f0f0;
 }
 
 .close-btn:hover {
-    background: rgba(244, 67, 54, 0.3);
-    color: #f44336;
+    background: #ffebee;
+    border-color: #d32f2f;
+    color: #d32f2f;
 }
 
 .close-btn:active {
-    background: rgba(244, 67, 54, 0.5);
+    background: #ffcdd2;
 }
