@@ -3,15 +3,15 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const TwitchClient = require('./src/twitch');
-const ModIntegration = require('./src/mod-integration');
 const ApplicationConfigLoader = require('./src/application-config-loader');
 
 const windows = {}; // Map to store windows by ID
 let twitchClient;
-let modIntegration;
-let gameConfig;
 let applicationConfigs = {};
 let uniqueApplications = new Set(); // Move to global scope
+
+// Queue managers for different window types
+const queueManagers = new Map(); // Map of windowType -> manager instance
 
 // Get auto-spin setting from environment (default: false)
 // Set AUTO_SPIN=true to enable
@@ -72,6 +72,62 @@ function createWindow(htmlFile = 'src/windows/wheel/index.html') {
     return windowId;
 }
 
+/**
+ * Dynamically load and initialize queue managers based on window configuration
+ * @param {object} windowsConfig - Windows configuration object
+ * @param {object} wheelOptions - All wheel options
+ * @param {object} appConfigs - Application configurations
+ */
+function initializeQueueManagers(windowsConfig, wheelOptions, appConfigs) {
+    if (!windowsConfig || !windowsConfig.windows) {
+        console.log('[QueueManager] No windows configuration found');
+        return;
+    }
+
+    windowsConfig.windows.forEach((windowConfig) => {
+        // Only initialize queue managers for enabled windows
+        if (!windowConfig.enabled) {
+            return;
+        }
+
+        const windowType = windowConfig.id;
+
+        try {
+            // Try to load the queue manager for this window type
+            const queueManagerPath = path.join(__dirname, `src/windows/${windowType}/queue-manager`);
+
+            // Check if the queue manager file exists
+            if (!fs.existsSync(queueManagerPath + '.js')) {
+                console.log(`[QueueManager] No queue manager found for window type: "${windowType}"`);
+                return;
+            }
+
+            // Dynamically require the queue manager
+            const QueueManagerClass = require(queueManagerPath);
+            console.log(`[QueueManager] Loaded queue manager for window type: "${windowType}"`);
+
+            // Initialize based on window type
+            if (windowType === 'wheel') {
+                // Wheel window uses wheel options
+                const manager = new QueueManagerClass(windowConfig.wheelOptions || wheelOptions);
+                manager.setApplicationConfigs(appConfigs);
+                manager.startQueueWorker();
+                queueManagers.set(windowType, manager);
+                console.log(`[QueueManager] Initialized wheel queue manager`);
+            } else {
+                // Other window types may initialize differently
+                const manager = new QueueManagerClass();
+                manager.setApplicationConfigs(appConfigs);
+                manager.startQueueWorker();
+                queueManagers.set(windowType, manager);
+                console.log(`[QueueManager] Initialized queue manager for "${windowType}"`);
+            }
+        } catch (error) {
+            console.warn(`[QueueManager] Failed to initialize queue manager for "${windowType}": ${error.message}`);
+        }
+    });
+}
+
 function registerIpcHandlers() {
     // Helper to get window from IPC event
     const getWindowFromEvent = (event) => {
@@ -126,51 +182,7 @@ function registerIpcHandlers() {
         }
     });
 
-    // Mod integration handlers
-    ipcMain.on('wheel-spin-result', (event, result) => {
-        console.log('Wheel result:', result);
-        // Note: Writing wheel results to file is handled by controller-specific implementations
-    });
-
-    ipcMain.on('get-mapped-mods', (event, wheelResult) => {
-        const mods = modIntegration.getMappedMods(wheelResult);
-        event.returnValue = mods;
-    });
-
-    ipcMain.on('trigger-mod-action', (event, { modKey, actionKey }) => {
-        const result = modIntegration.triggerModAction(modKey, actionKey);
-        event.returnValue = result;
-    });
-
-    ipcMain.on('get-all-mods', (event) => {
-        const mods = modIntegration.getAllMods();
-        event.returnValue = mods;
-    });
-
-    ipcMain.on('get-mod-config', (event, modKey) => {
-        const config = modIntegration.getModConfig(modKey);
-        event.returnValue = config;
-    });
-
-    ipcMain.on('set-mod-enabled', (event, { modKey, enabled }) => {
-        const result = modIntegration.setModEnabled(modKey, enabled);
-        event.returnValue = result;
-    });
-
-    ipcMain.on('add-wheel-mapping', (event, { wheelResult, modKey }) => {
-        const result = modIntegration.addWheelMapping(wheelResult, modKey);
-        event.returnValue = result;
-    });
-
-    ipcMain.on('remove-wheel-mapping', (event, { wheelResult, modKey }) => {
-        const result = modIntegration.removeWheelMapping(wheelResult, modKey);
-        event.returnValue = result;
-    });
-
-    ipcMain.handle('get-game-name', () => {
-        return null; // No default application
-    });
-
+    // Mod integration handlers removed
     ipcMain.handle('get-auto-spin-config', () => {
         return AUTO_SPIN;
     });
@@ -337,10 +349,8 @@ app.on('ready', () => {
         console.warn(`[Main] Failed to save mapping files: ${error.message}`);
     }
 
-    // Initialize Mod Integration with current application
-    const currentApp = Array.from(uniqueApplications)[0] || null;
-    modIntegration = new ModIntegration('mod-config.json', appToControllersLog, controllerToAppsLog, currentApp);
-    console.log('Mod Integration initialized');
+    // Initialize queue managers based on window configuration
+    initializeQueueManagers(windowsConfig, allWheelOptions, applicationConfigs);
 
     // Initialize Twitch Client (optional - skip if credentials missing)
     try {
@@ -377,14 +387,22 @@ function clearStartupQueues() {
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
+        // Stop all queue workers before quitting
+        queueManagers.forEach((manager, windowType) => {
+            if (manager && manager.stopQueueWorkers) {
+                console.log(`[Main] Stopping queue workers for "${windowType}"`);
+                manager.stopQueueWorkers();
+            }
+        });
+        queueManagers.clear();
         app.quit();
     }
 });
 
 app.on('activate', () => {
-    if (Object.keys(windows).length === 0) {
-        createWindow('src/windows/wheel/index.html');
-    }
+    // if (Object.keys(windows).length === 0) {
+    //     createWindow('src/windows/wheel/index.html');
+    // }
 });
 
 // IPC Handlers
@@ -392,44 +410,26 @@ ipcMain.on('spin-wheel', (event, wheelResult) => {
     try {
         console.log('Wheel spun! Result:', wheelResult);
 
-        // wheelResult is now the full option object with config
-        if (wheelResult.config) {
-            // Determine which executor to use based on application and controller
-            const application = wheelResult.application || 'Notepad';
-            const controller = wheelResult.controller || 'AutoHotkey';
+        // Create queue name from application and controller
+        const application = wheelResult.application || 'Notepad';
+        const controller = wheelResult.controller || 'AutoHotkey';
+        const queueName = `${application}-${controller}`;
 
-            if (controller === 'AutoHotkey') {
-                // Execute executor.ahk with entire config object as JSON
-                const ahkScript = path.join(__dirname, 'controllers', 'autohotkey', 'executor.ahk');
-                const configJson = JSON.stringify(wheelResult.config);
-
-                // Get the application's AutoHotkey configuration (use lowercase for lookup)
-                const appConfig = applicationConfigs[application.toLowerCase()] || {};
-                const autohotKeyConfig = appConfig.controllers?.AutoHotkey || {};
-                const autohotKeyJson = JSON.stringify(autohotKeyConfig);
-
-                console.log(`Executing: ${ahkScript} with config: ${configJson}`);
-                console.log(`With AutoHotkey config: ${autohotKeyJson}`);
-
-                // Use AutoHotkey executable directly, not PowerShell
-                const ahkExe = 'C:\\Program Files\\AutoHotkey\\v2\\AutoHotkey.exe';
-                spawn(ahkExe, [ahkScript, configJson, autohotKeyJson], {
-                    detached: false,
-                    stdio: 'ignore'
-                }).unref();
-            }
+        // Get the wheel queue manager
+        const wheelQueueManager = queueManagers.get('wheel');
+        if (wheelQueueManager) {
+            wheelQueueManager.addToQueue(queueName, wheelResult);
+        } else {
+            console.error('Wheel queue manager not initialized');
         }
 
-        // TODO: Send to Skyrim mod via HTTP or file I/O
-        // For now, just broadcast back to renderer
+        // Broadcast back to renderer immediately
         const window = BrowserWindow.fromWebContents(event.sender);
         if (window && window.webContents) {
             window.webContents.send('spin-result', wheelResult.name || wheelResult);
         }
     } catch (error) {
         console.error('Error handling spin-wheel:', error);
-        // Silently handle errors (e.g., broken pipe, closed window)
-        // Don't crash the process
     }
 });
 
