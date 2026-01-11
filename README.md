@@ -582,7 +582,7 @@ The test framework has been manually verified to work correctly. The overlay suc
 
 ## License
 
-MIT
+This project is licensed under the GNU General Public License v3.0. See the LICENSE file for details.
 
 ## Support
 
