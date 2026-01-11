@@ -21,7 +21,8 @@ const AUTO_SPIN = process.env.AUTO_SPIN === 'true' || process.argv.includes('--e
 const WINDOW_WIDTH = 600;
 const WINDOW_HEIGHT = 600;
 
-function createWindow(htmlFile = 'src/windows/boilderplate/index.html') {
+function createWindow(windowConfig = { html: 'src/windows/boilderplate/index.html' }) {
+    const htmlFile = windowConfig.html || 'src/windows/boilderplate/index.html';
     const window = new BrowserWindow({
         width: WINDOW_WIDTH,
         height: WINDOW_HEIGHT,
@@ -207,7 +208,7 @@ app.on('ready', () => {
     const createdWindows = [];
     windowsConfig.windows.forEach((windowConfig, index) => {
         if (windowConfig.enabled) {
-            const windowId = createWindow(windowConfig.html);
+            const windowId = createWindow(windowConfig);
             createdWindows.push({ id: windowId, config: windowConfig });
             windowConfigs.set(windowConfig.id, { windowId: windowId, config: windowConfig });
             console.log(`[Main] Created window "${windowConfig.name}" (ID: ${windowId}) from ${windowConfig.html}`);
