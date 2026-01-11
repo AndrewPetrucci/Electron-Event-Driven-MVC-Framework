@@ -1,6 +1,24 @@
 {
     "windows": [
         {
+            "id": "twitch",
+            "name": "Twitch Window",
+            "html": "src/views/twitch/index.html",
+            "enabled": true,
+            "position": {
+                "offset": 1,
+                "xOffset": -610,
+                "yOffset": 0
+            },
+            "buttonOptions": [
+                {
+                    "id": "actionBtn",
+                    "controller": "AutoHotkey",
+                    "config": {}
+                }
+            ]
+        },
+        {
             "id": "wheel",
             "name": "Twitch Wheel",
             "html": "src/views/wheel/index.html",
@@ -126,7 +144,7 @@
             "id": "sticky",
             "name": "Sticky Window",
             "html": "src/views/sticky/index.html",
-            "enabled": true,
+            "enabled": false,
             "position": {
                 "offset": 0,
                 "xOffset": 0,
@@ -146,7 +164,7 @@
             "id": "fileWatcher",
             "name": "File Watcher",
             "html": "src/views/fileWatcher/index.html",
-            "enabled": true,
+            "enabled": false,
             "position": {
                 "offset": 2,
                 "xOffset": 0,

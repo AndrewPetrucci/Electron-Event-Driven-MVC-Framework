@@ -1,12 +1,69 @@
+// --- Simple Express server for OAuth redirect ---
+const express = require('express');
+const oauthApp = express();
+const OAUTH_PORT = 3000;
+
+oauthApp.get('/', (req, res) => {
+    // Serve a simple HTML page that extracts the access token from the URL fragment and sends it to Electron
+    res.send(`
+        <html>
+        <body>
+            <h2>Twitch OAuth Complete</h2>
+            <p>You may now close this window.</p>
+            <script>
+                // Parse access_token from URL fragment
+                const hash = window.location.hash.substring(1);
+                const params = new URLSearchParams(hash);
+                const token = params.get('access_token');
+                if (token) {
+                    // Send token to Electron main process via fetch to /token endpoint
+                    fetch('/token', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token })
+                    });
+                }
+            </script>
+        </body>
+        </html>
+    `);
+});
+
+// Endpoint to receive token from browser and send to Electron
+let latestOAuthToken = null;
+oauthApp.post('/token', express.json(), (req, res) => {
+    latestOAuthToken = req.body.token;
+    console.log('[OAuth] Received access token:', latestOAuthToken);
+    // Optionally, send to all renderer windows
+    for (const win of Object.values(windows)) {
+        if (win && win.webContents) {
+            win.webContents.send('twitch-oauth-token', latestOAuthToken);
+        }
+    }
+    // Update process.env and connect to Twitch with new token
+    process.env.TWITCH_OAUTH_TOKEN = latestOAuthToken;
+    try {
+        const { connectTwitch } = require('./src/twitch');
+        connectTwitch();
+    } catch (err) {
+        console.error('[OAuth] Failed to connect Twitch after receiving token:', err);
+    }
+    res.sendStatus(200);
+});
+
+oauthApp.listen(OAUTH_PORT, () => {
+    console.log(`[OAuth] Listening for Twitch OAuth redirect on http://localhost:${OAUTH_PORT}/`);
+});
+require('dotenv').config();
 const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
+
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
-const TwitchClient = require('./src/twitch');
+
 const ApplicationConfigLoader = require('./src/application-config-loader');
 
 const windows = {}; // Map to store windows by ID
-let twitchClient;
 let applicationConfigs = {};
 let uniqueApplications = new Set(); // Move to global scope
 
@@ -53,7 +110,7 @@ function createWindow(htmlFile = 'src/windows/boilderplate/index.html') {
 
     // Start with mouse events ignored so clicks pass through
     // todo: this needs to be handled at the view level.
-    window.setIgnoreMouseEvents(true, { forward: true });
+    // window.setIgnoreMouseEvents(true, { forward: true });
 
     // Open DevTools in dev mode
     if (process.argv.includes('--dev')) {
@@ -333,19 +390,11 @@ app.on('ready', () => {
     // Initialize queue managers based on window configuration
     initializeQueueManagers(windowsConfig, applicationConfigs);
 
-    // Initialize Twitch Client (optional - skip if credentials missing)
-    try {
-        if (process.env.TWITCH_BOT_USERNAME && process.env.TWITCH_OAUTH_TOKEN && process.env.TWITCH_CHANNEL) {
-            twitchClient = new TwitchClient();
-            twitchClient.connect();
-        } else {
-            console.log('Twitch credentials not configured - Twitch integration disabled');
-            const spinStatus = AUTO_SPIN ? 'Auto-spin enabled' : 'Auto-spin disabled';
-            console.log(`[Main] ${spinStatus} (configurable via AUTO_SPIN environment variable)`);
-        }
-    } catch (error) {
-        console.warn('Failed to initialize Twitch client:', error.message);
-        console.log('Continuing without Twitch integration...');
+    // Twitch integration is now handled directly in src/twitch.js
+    if (!(process.env.TWITCH_BOT_USERNAME && process.env.TWITCH_OAUTH_TOKEN && process.env.TWITCH_CHANNEL)) {
+        console.log('Twitch credentials not configured - Twitch integration disabled');
+        const spinStatus = AUTO_SPIN ? 'Auto-spin enabled' : 'Auto-spin disabled';
+        console.log(`[Main] ${spinStatus} (configurable via AUTO_SPIN environment variable)`);
     }
 
     // Clear log files and event queue on startup
@@ -381,7 +430,15 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-    
+
+});
+
+// Expose Twitch credentials to renderer
+ipcMain.handle('get-twitch-credentials', () => {
+    return {
+        clientId: process.env.TWITCH_CLIENT_ID,
+        clientSecret: process.env.TWITCH_CLIENT_SECRET
+    };
 });
 
 // IPC Handlers
@@ -463,11 +520,7 @@ ipcMain.on('button-click', (event, clickData) => {
     }
 });
 
-ipcMain.on('twitch-status-request', (event) => {
-    event.sender.send('twitch-status', {
-        isConnected: twitchClient && twitchClient.isConnected
-    });
-});
+
 
 ipcMain.handle('get-config', async () => {
     // Return available applications and their wheel options
