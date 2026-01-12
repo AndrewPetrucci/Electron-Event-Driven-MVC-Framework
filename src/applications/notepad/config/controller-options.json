@@ -4,6 +4,11 @@
             "notepad": {
                 "applicationName": "Notepad"
             }
+        },
+        "PythonKeys": {
+            "notepad": {
+                "applicationName": "Notepad"
+            }
         }
     }
 }

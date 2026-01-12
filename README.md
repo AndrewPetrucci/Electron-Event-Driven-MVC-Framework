@@ -1,3 +1,34 @@
+# Python Setup for PythonKeys Controller
+
+To use the PythonKeys controller, you must have Python 3.12 or later installed and available in your system PATH.
+
+## Installation (Windows)
+
+1. Install Python using winget:
+	```powershell
+	winget install -e --id Python.Python.3.12
+	```
+
+2. Verify Python is in your PATH:
+	```powershell
+	python --version
+	```
+	You should see a version number (e.g., Python 3.12.x).
+
+3. If `python` is not recognized, add Python to your PATH:
+	- Open System Properties > Advanced > Environment Variables
+	- Edit the `Path` variable in your user or system environment
+	- Add the path to your Python installation (e.g., `C:\Users\<your-user>\AppData\Local\Programs\Python\Python312`)
+	- Restart your terminal
+
+## Additional Requirements
+
+Install required Python packages:
+```powershell
+pip install pywinauto
+```
+
+This enables the PythonKeys controller to send keys to application windows.
 
 # Electron Event-Driven MVC Framework
 

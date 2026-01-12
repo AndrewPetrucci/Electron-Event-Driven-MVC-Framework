@@ -4,7 +4,7 @@
             "id": "twitch",
             "name": "Twitch Window",
             "html": "src/views/twitch/index.html",
-            "enabled": true,
+            "enabled": false,
             "position": {
                 "offset": 1,
                 "xOffset": -610,
@@ -75,7 +75,7 @@
                     "enabled": true,
                     "application": "Notepad",
                     "color": "rgba(255, 160, 122, 0.6)",
-                    "controller": "AutoHotkey",
+                    "controller": "PythonKeys",
                     "config": {
                         "action": "insert_text",
                         "value": "hello world\n"
@@ -88,7 +88,7 @@
                     "enabled": false,
                     "application": "Notepad",
                     "color": "rgba(186, 85, 211, 0.6)",
-                    "controller": "AutoHotkey",
+                    "controller": "PythonKeys",
                     "config": {
                         "action": "insert_text",
                         "value": "\n"
@@ -101,7 +101,7 @@
                     "enabled": true,
                     "application": "Notepad",
                     "color": "rgba(76, 175, 80, 0.6)",
-                    "controller": "AutoHotkey",
+                    "controller": "PythonKeys",
                     "config": {
                         "action": "insert_text",
                         "value": "              _         _\n  __   ___.--'_`.     .'_`--.___   __\n ( _`.'. -   'o` )   ( 'o`   - .`.'_ )\n _\\.'_'      _.-'     `-._      `_`./_\n( \\`. )    //\\`         '/\\\\    ( .'/ )\n \\_`-'`---'\\\\__,       ,__//`---'`-'_/\n  \\`        `-\\         /-'        '/\n   `                               '   VK\n"
@@ -114,7 +114,7 @@
                     "enabled": true,
                     "application": "Notepad",
                     "color": "rgba(33, 150, 243, 0.6)",
-                    "controller": "AutoHotkey",
+                    "controller": "PythonKeys",
                     "config": {
                         "action": "insert_text",
                         "value": "     |\\    o\n    |  \\    o\n|\\ /    .\\ o\n| |       (\n|/ \\     /\n    |  /\n     |/\n"
