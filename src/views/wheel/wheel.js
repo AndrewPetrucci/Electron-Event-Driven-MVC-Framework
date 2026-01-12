@@ -24,6 +24,27 @@ class SpinWheel {
 
         this.setupEventListeners();
         this.draw();
+
+        // Listen for Twitch connection status and update chatStatus
+        if (window.electron && window.electron.onTwitchStatusChanged) {
+            window.electron.onTwitchStatusChanged((status) => {
+                const chatStatus = document.getElementById('chatStatus');
+                if (chatStatus) {
+                    let icon = '';
+                    let message = '';
+                    if (status.isConnected) {
+                        icon = '✅';
+                        message = 'Connected to Twitch';
+                        chatStatus.className = 'connected';
+                    } else {
+                        icon = '❌';
+                        message = 'Twitch connection failed';
+                        chatStatus.className = 'error';
+                    }
+                    chatStatus.textContent = `Twitch: ${icon} ${message}`;
+                }
+            });
+        }
     }
 
     setupEventListeners() {
@@ -53,6 +74,33 @@ class SpinWheel {
             window.electron.onSpinResult((result) => {
                 this.updateResult(result);
             });
+            // Listen for Twitch chat !spin trigger from main process
+            if (window.electron && window.electron.onTwitchSpinTriggered === undefined) {
+                // Add a handler if not already present in preload.js
+                window.electron.onTwitchSpinTriggered = (callback) => {
+                    if (window.electron && window.electron.sendMessage) {
+                        window.electron.onTwitchSpinTriggeredCallback = callback;
+                        window.electron.sendMessage('register-twitch-spin-triggered', {});
+                    }
+                };
+            }
+            if (window.electron.onTwitchSpinTriggered) {
+                window.electron.onTwitchSpinTriggered(() => {
+                    this.spin();
+                });
+            }
+            // Fallback: listen for the IPC event directly if exposed
+            if (window.electron && window.electron.onTwitchSpin) {
+                window.electron.onTwitchSpin(() => {
+                    this.spin();
+                });
+            }
+            // Or listen for the event on the window
+            if (window && window.addEventListener) {
+                window.addEventListener('twitch-spin-triggered', () => {
+                    this.spin();
+                });
+            }
         }
 
         // Get auto-spin configuration from main process

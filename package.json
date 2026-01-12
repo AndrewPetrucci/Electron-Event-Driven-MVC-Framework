@@ -16,6 +16,7 @@
     "author": "Your Name",
     "license": "MIT",
     "dependencies": {
+        "express": "^5.2.1",
         "tmi.js": "^1.8.5"
     },
     "devDependencies": {

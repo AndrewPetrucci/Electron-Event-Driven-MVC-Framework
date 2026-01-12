@@ -1,6 +1,10 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electron', {
+    onTwitchOAuthToken: (callback) => ipcRenderer.on('twitch-oauth-token', (event, token) => callback(token)),
+    onTwitchSpinTriggered: (callback) => ipcRenderer.on('twitch-spin-triggered', () => callback()),
+    // Twitch credentials
+    getTwitchCredentials: () => ipcRenderer.invoke('get-twitch-credentials'),
     spinWheel: (result) => ipcRenderer.send('spin-wheel', result),
     onSpinResult: (callback) => ipcRenderer.on('spin-result', (event, result) => callback(result)),
     onLoadWheelOptions: (callback) => ipcRenderer.on('load-wheel-options', (event, options) => callback(options)),
