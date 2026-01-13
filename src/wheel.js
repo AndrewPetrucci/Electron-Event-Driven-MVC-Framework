@@ -121,7 +121,6 @@ class SpinWheel {
             // Draw text
             this.ctx.save();
             this.ctx.rotate(((i * sliceAngle + sliceAngle / 2) * Math.PI) / 180);
-            this.ctx.rotate(Math.PI); // Flip text 180 degrees
             this.ctx.textAlign = 'left';
             this.ctx.fillStyle = 'white';
             this.ctx.font = 'bold 14px Arial';
