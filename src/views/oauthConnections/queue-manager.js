@@ -10,7 +10,7 @@ const SharedQueueManager = require('../shared/queue-manager');
 class BoilerplateQueueManager extends SharedQueueManager {
     constructor(windowConfig = {}) {
         super(windowConfig);
-        this.buttonOptions = windowConfig.buttonOptions || [];
+        this.buttonOptions = windowConfig.options.buttons || [];
         console.log(`[BoilerplateQueueManager] Constructor called with buttonOptions:`, this.buttonOptions.length);
         // Now initialize queues after buttonOptions is set
         this.initializeQueues();
@@ -58,7 +58,7 @@ class BoilerplateQueueManager extends SharedQueueManager {
             return;
         }
 
-        const controller = button.controller || 'AutoHotkey';
+        const controller = button.controller || 'pythonkeys';
         const queueName = `${buttonId}-${controller}`;
 
         // Prepare the click result

@@ -20,7 +20,7 @@ class QueueWorker {
 
     /**
      * Dynamically load a controller module based on controller type
-     * @param {string} controller - Controller name (e.g., 'AutoHotkey')
+    * @param {string} controller - Controller name (e.g., 'pythonkeys')
      * @returns {object} - Controller module with executeController function
      */
     getControllerModule(controller) {
@@ -89,17 +89,17 @@ class QueueWorker {
         this.isProcessing = true;
         const processAsync = async () => {
             while (this.queue.length > 0) {
-                const wheelResult = this.queue.shift();
+                const eventData = this.queue.shift();
                 console.log(`[QueueWorker:${this.queueName}] Processing item (${this.queue.length} remaining)`);
 
                 try {
-                    if (wheelResult.config) {
-                        const controller = wheelResult.controller || 'file-writer';
+                    if (eventData.config) {
+                        const controller = eventData.controller || 'file-writer';
 
                         // Dynamically load and execute the controller
                         const controllerModule = this.getControllerModule(controller);
                         if (controllerModule.executeController) {
-                            await controllerModule.executeController(wheelResult, this.applicationConfigs);
+                            await controllerModule.executeController(eventData, this.applicationConfigs);
                         } else {
                             console.error(`[QueueWorker:${this.queueName}] Controller module does not export executeController`);
                         }

@@ -44,7 +44,7 @@ class NotepadWheelTester {
                     command: 'hello_world',
                     enabled: true,
                     application: 'Notepad',
-                    controller: 'AutoHotkey',
+                    controller: 'pythonkeys',
                     config: {
                         action: 'insert_text',
                         text: 'hello world'
@@ -268,7 +268,7 @@ mainWindow.webContents.executeJavaScript('window.wheel.spin()');
         this.log('Simulating SPIN button click...');
 
         try {
-            // Use AutoHotkey to press Tab and Enter to click the button
+            // Use pythonkeys to press Tab and Enter to click the button
             const ahkScript = path.join(__dirname, 'temp_button_click.ahk');
             const ahkContent = `
 #NoEnv
@@ -290,10 +290,10 @@ ExitApp
 
             fs.writeFileSync(ahkScript, ahkContent, 'utf-8');
 
-            const ahkExecutable = 'C:\\Program Files\\AutoHotkey\\v2\\AutoHotkey.exe';
+            const ahkExecutable = 'C:\\Program Files\\pythonkeys\\pythonkeys.exe';
 
             if (!fs.existsSync(ahkExecutable)) {
-                this.logError('AutoHotkey executable not found');
+                this.logError('pythonkeys executable not found');
                 return false;
             }
 
@@ -329,14 +329,14 @@ ExitApp
     }
 
     async detectInsertedText() {
-        this.log(`Verifying text insertion in Notepad using AutoHotkey...`);
+        this.log(`Verifying text insertion in Notepad using pythonkeys...`);
 
         // Wait a bit more to ensure the command has been executed
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Create a simple AutoHotkey v2 script to check Notepad content
+        // Create a simple pythonkeys script to check Notepad content
         const checkScript = path.join(__dirname, 'temp_check_notepad.ahk');
-        const ahkContent = '#Requires AutoHotkey v2.0\n\n' +
+        const ahkContent = '# pythonkeys script\n\n' +
             '; Focus on Notepad window\n' +
             'WinActivate("ahk_class Notepad")\n' +
             'Sleep(1000)\n\n' +
@@ -369,7 +369,7 @@ ExitApp
         try {
             fs.writeFileSync(checkScript, ahkContent, 'utf-8');
 
-            const ahkExecutable = 'C:\\Program Files\\AutoHotkey\\v2\\AutoHotkey.exe';
+            const ahkExecutable = 'C:\\Program Files\\pythonkeys\\pythonkeys.exe';
             const resultFile = path.join(process.env.TEMP || 'C:\\temp', 'notepad-check-result.txt');
 
             // Clean up any previous result
@@ -431,7 +431,7 @@ ExitApp
                 });
 
                 ahkProcess.on('error', (error) => {
-                    this.logError(`Failed to start AutoHotkey: ${error.message}`);
+                    this.logError(`Failed to start pythonkeys: ${error.message}`);
                     try { fs.unlinkSync(checkScript); } catch (e) { }
                     resolve(false);
                 });
@@ -497,7 +497,7 @@ ExitApp
 
         // Test 5: Text inserted
         if (this.testResults.textInserted) {
-            this.logSuccess(`Text "${this.expectedText}" inserted via AutoHotkey controller`);
+            this.logSuccess(`Text "${this.expectedText}" inserted via pythonkeys controller`);
             passCount++;
         } else {
             this.logError(`Text "${this.expectedText}" was not inserted`);

@@ -1,6 +1,6 @@
 {
     "controllers": {
-        "AutoHotkey": {
+        "pythonkeys": {
             "skyrim": {
                 "applicationName": "Skyrim Special Edition",
                 "consoleOpen": "`",

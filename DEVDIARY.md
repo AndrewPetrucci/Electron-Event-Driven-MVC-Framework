@@ -15,7 +15,7 @@ In simple terms, that depends on what type of person you are.
 
 My goal is to make this relatively lightweight framework with plug and play functionality for a variety of integrations and ui elements.
 
-The current implementation has been tested from the ui, to autohotkey, to a target application (notepad/skyrim).
+The current implementation has been tested from the ui, to pythonkeys, to a target application (notepad/skyrim).
 
 #### Step-by-Step Flow
 
@@ -29,10 +29,10 @@ The current implementation has been tested from the ui, to autohotkey, to a targ
 
 3. **Electron Main Process**
    - Receives option object via IPC
-   - Sends the event to wherever it needs to go. (currently it just spawns the autohotkey process directly)
-   - Spawns AutoHotkey executor process with config as JSON argument
+   - Sends the event to wherever it needs to go. (currently it just spawns the pythonkeys process directly)
+   - Spawns pythonkeys executor process with config as JSON argument
 
-4. **AutoHotkey Executor** (`controllers/autohotkey/executor.ahk`)
+4. **pythonkeys Executor** (`controllers/pythonkeys/executor.py`)
    - Recieves and parses json configurations
    - auto focuses the target applicaiton
    - Does an operation based off said json congigs that either sends keys or inserts text.

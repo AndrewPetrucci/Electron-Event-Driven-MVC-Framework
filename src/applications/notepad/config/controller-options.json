@@ -1,10 +1,5 @@
 {
     "controllers": {
-        "AutoHotkey": {
-            "notepad": {
-                "applicationName": "Notepad"
-            }
-        },
         "PythonKeys": {
             "notepad": {
                 "applicationName": "Notepad"

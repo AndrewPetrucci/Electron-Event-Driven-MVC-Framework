@@ -86,8 +86,8 @@ function createWindow(windowConfig = { html: 'src/windows/boilderplate/index.htm
         x: require('electron').screen.getPrimaryDisplay().workAreaSize.width - WINDOW_WIDTH,
         y: require('electron').screen.getPrimaryDisplay().workAreaSize.height - WINDOW_HEIGHT,
         alwaysOnTop: false,
-        transparent: false,
-        frame: true,
+        transparent: true,
+        frame: false,
         resizable: true,
         skipTaskbar: false,
         icon: path.join(__dirname, 'assets/icon.png'),
@@ -104,10 +104,6 @@ function createWindow(windowConfig = { html: 'src/windows/boilderplate/index.htm
     console.log(`Created window with ID: ${windowId} - Loading: ${htmlFile}`);
 
     window.loadFile(htmlFile);
-
-    // Start with mouse events ignored so clicks pass through
-    // todo: this needs to be handled at the view level.
-    // window.setIgnoreMouseEvents(true, { forward: true });
 
     // Open DevTools in dev mode
     if (process.argv.includes('--dev')) {
@@ -388,7 +384,7 @@ app.on('ready', () => {
 function clearStartupQueues() {
     const logFile = path.join(__dirname, 'command-executor.log');
 
-    // Clear AutoHotkey log
+    // Clear pythonkeys log
     try {
         if (fs.existsSync(logFile)) {
             fs.writeFileSync(logFile, '');
@@ -432,7 +428,7 @@ ipcMain.on('spin-wheel', (event, wheelResult) => {
 
         // Create queue name from application and controller
         const application = wheelResult.application || 'Notepad';
-        const controller = wheelResult.controller || 'AutoHotkey';
+        const controller = wheelResult.controller || 'pythonkeys';
         const queueName = `${application}-${controller}`;
 
         // Get the wheel queue manager

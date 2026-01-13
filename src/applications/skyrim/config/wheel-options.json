@@ -6,7 +6,7 @@
             "description": "Teleport to Whiterun",
             "enabled": true,
             "application": "Skyrim",
-            "controller": "AutoHotkey",
+            "controller": "pythonkeys",
             "config": {
                 "action": "insert_text",
                 "value": "coc Whiterun{Enter}"

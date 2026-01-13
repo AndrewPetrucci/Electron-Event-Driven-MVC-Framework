@@ -26,15 +26,15 @@ Wheel Spin → Python Executor → Command Queue File → Controller → Game Ac
 
 ## Available Controllers
 
-### AutoHotkey (Windows)
-- **Location**: `controllers/autohotkey/notepad-executor.ahk` (Notepad)
-- **Requirements**: AutoHotkey v2.0+
+### pythonkeys (Windows)
+- **Location**: `controllers/pythonkeys/send_keys.py` (Notepad)
+- **Requirements**: pythonkeys
 - **Installation**:
-  1. Download and install [AutoHotkey v2.0+](https://www.autohotkey.com/download/)
-  2. Run the installer with default settings (installs to `C:\Program Files\AutoHotkey\v2\`)
-  3. AutoHotkey will be automatically available in your PATH
-  4. Verify installation by running `AutoHotkey.exe --version` in PowerShell
-  5. The scripts can now be executed directly via `AutoHotkey.exe script-name.ahk`
+  1. Download and install pythonkeys
+  2. Run the installer with default settings (installs to `C:\Program Files\pythonkeys\`)
+  3. pythonkeys will be automatically available in your PATH
+  4. Verify installation by running `pythonkeys.exe --version` in PowerShell
+  5. The scripts can now be executed directly via `pythonkeys.exe script-name.py`
 
 - **How it works (Notepad)**:
   1. Detects wheel spin result
@@ -53,8 +53,8 @@ Wheel Spin → Python Executor → Command Queue File → Controller → Game Ac
   - Requires the target window to be active/responsive
 
 - **Troubleshooting**:
-  - If scripts don't execute, ensure AutoHotkey v2.0+ is installed
-  - Add AutoHotkey to PATH: `[Environment]::SetEnvironmentVariable("PATH", "$env:PATH;C:\Program Files\AutoHotkey\v2", "User")`
+  - If scripts don't execute, ensure pythonkeys is installed
+  - Add pythonkeys to PATH: `[Environment]::SetEnvironmentVariable("PATH", "$env:PATH;C:\Program Files\pythonkeys", "User")`
   - Check that target application window is responding
   - Increase sleep delays in .ahk scripts if timing issues occur
 
@@ -99,13 +99,13 @@ player.additem 0x00058a4c 1
 tgm
 ```
 
-## Using AutoHotkey Controller
+## Using pythonkeys Controller
 
 ### Setup
 
-1. Install AutoHotkey v1.1:
+1. Install pythonkeys:
    ```
-   https://www.autohotkey.com/download/
+  https://github.com/pythonkeys/pythonkeys
    ```
 
 2. Run the executor script for your application
@@ -126,7 +126,7 @@ tgm
 1. Start all components:
    - Overlay: `npm start`
    - Executor: `python applications/[game]/executors/console-executor.py`
-   - Controller: `.\controllers\autohotkey\[game]-executor.ahk`
+  - Controller: `.\controllers\pythonkeys\[game]-executor.py`
 
 2. Spin the wheel in the overlay
 

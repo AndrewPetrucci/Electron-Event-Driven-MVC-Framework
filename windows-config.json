@@ -24,7 +24,7 @@
             "id": "wheel",
             "name": "Twitch Wheel",
             "html": "src/views/wheel/index.html",
-            "enabled": false,
+            "enabled": true,
             "position": {
                 "offset": 0,
                 "xOffset": 0,
@@ -65,7 +65,7 @@
                         "enabled": false,
                         "application": "Notepad",
                         "color": "rgba(69, 183, 209, 0.6)",
-                        "controller": "AutoHotkey",
+                        "controller": "pythonkeys",
                         "config": {
                             "action": "send_keys",
                             "value": "^n"
@@ -140,7 +140,7 @@
                 "buttons": [
                     {
                         "id": "actionBtn",
-                        "controller": "AutoHotkey",
+                        "controller": "file-writer",
                         "config": {}
                     }
                 ]

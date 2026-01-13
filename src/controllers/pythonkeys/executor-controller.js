@@ -2,7 +2,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 
 /**
- * Execute an AutoHotkey script with the given wheel result and application config
+ * Execute a pythonkeys script with the given wheel result and application config
  * @param {object} wheelResult - The wheel result object with config
  * @param {object} applicationConfigs - Map of all application configurations
  * @returns {Promise<void>}

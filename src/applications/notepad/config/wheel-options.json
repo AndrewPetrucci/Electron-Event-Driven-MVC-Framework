@@ -6,7 +6,7 @@
             "description": "Insert current date and time",
             "enabled": false,
             "application": "Notepad",
-            "controller": "AutoHotkey",
+            "controller": "pythonkeys",
             "color": "rgba(255, 107, 107, 0.6)",
             "config": {
                 "action": "send_keys",
@@ -19,7 +19,7 @@
             "description": "Save the current document",
             "enabled": false,
             "application": "Notepad",
-            "controller": "AutoHotkey",
+            "controller": "pythonkeys",
             "color": "rgba(78, 205, 196, 0.6)",
             "config": {
                 "action": "send_keys",

@@ -140,7 +140,7 @@ Document game-specific setup in `applications/[game-name]/README.md`
 
 ### Game Examples
 
-**Fallout 4/76**: Similar to Skyrim, use console commands via AutoHotkey
+**Fallout 4/76**: Similar to Skyrim, use console commands via pythonkeys
 
 **Minecraft**: Send commands via RCON (remote console)
 

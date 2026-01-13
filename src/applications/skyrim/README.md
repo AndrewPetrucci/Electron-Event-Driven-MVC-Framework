@@ -1,11 +1,11 @@
 # Skyrim Wheel Overlay Integration
 
-Game-specific implementation for Skyrim Special Edition with AutoHotkey console command execution.
+Game-specific implementation for Skyrim Special Edition with pythonkeys console command execution.
 
 ## Features
 
 - **Console Commands** - Execute any Skyrim console command (coc, player.setav, etc.)
-- **AutoHotkey Integration** - Automated console input via keyboard simulation
+- **pythonkeys Integration** - Automated console input via keyboard simulation
 - **Mod Support** - Integrates with Skyrim mods for enhanced effects
 - **Smooth Execution** - Commands execute seamlessly in-game
 
@@ -23,7 +23,7 @@ Define the wheel options that appear in the overlay and the console commands to 
     "description": "Teleports player to Whiterun",
     "enabled": true,
     "application": "Skyrim",
-    "controller": "AutoHotkey"
+    "controller": "pythonkeys"
   },
   {
     "name": "Spawn Spider",
@@ -31,7 +31,7 @@ Define the wheel options that appear in the overlay and the console commands to 
     "description": "Spawns a Frost Spider",
     "enabled": true,
     "application": "Skyrim",
-    "controller": "AutoHotkey"
+    "controller": "pythonkeys"
   }
 ]
 ```
@@ -42,7 +42,7 @@ Define the wheel options that appear in the overlay and the console commands to 
 - `description` - Tooltip text
 - `enabled` - Set to false to hide from wheel
 - `application` - Target application/game (e.g., "Skyrim")
-- `controller` - Execution method (e.g., "AutoHotkey")
+- `controller` - Execution method (e.g., "pythonkeys")
 
 ## Running Skyrim with Overlay
 
@@ -95,9 +95,9 @@ See [Skyrim Console Commands](https://en.uesp.net/wiki/Skyrim:Console) for more 
 2. Type command and press Enter
 3. If it works manually, check Python script logs
 
-**Verify AutoHotkey:**
-- Is AutoHotkey v1.1 installed?
-- Check Windows PATH includes AutoHotkey
+**Verify pythonkeys:**
+- Is pythonkeys installed?
+- Check Windows PATH includes pythonkeys
 - Test manual keystrokes work in game
 
 **Check command syntax:**
@@ -148,16 +148,16 @@ Create scripts that check game state before executing commands.
 
 ## Integration with Skyrim
 
-The overlay can execute any console command in Skyrim via AutoHotkey automation.
+The overlay can execute any console command in Skyrim via pythonkeys automation.
 
 ## Performance Notes
 
 - Console commands execute instantly
 - Typical response time: < 1 second
-- AutoHotkey overhead: minimal
+- pythonkeys overhead: minimal
 - No frame rate impact in-game
 
 ## References
 
 - [Skyrim Console Commands](https://en.uesp.net/wiki/Skyrim:Console)
-- [AutoHotkey Documentation](https://www.autohotkey.com/)
+- [pythonkeys Documentation](https://github.com/pythonkeys/pythonkeys)
