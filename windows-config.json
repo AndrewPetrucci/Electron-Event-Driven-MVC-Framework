@@ -39,7 +39,7 @@
                         "enabled": false,
                         "application": "Notepad",
                         "controller": "PythonKeys",
-                        "color": "rgba(255, 107, 107, 0.6)",
+                        "color": "rgba(255, 107, 107, 0.2)",
                         "config": {
                             "action": "send_keys",
                             "value": "^+t"
@@ -52,7 +52,7 @@
                         "enabled": false,
                         "application": "Notepad",
                         "controller": "PythonKeys",
-                        "color": "rgba(78, 205, 196, 0.6)",
+                        "color": "rgba(78, 205, 196, 0.2)",
                         "config": {
                             "action": "send_keys",
                             "value": "^s"
@@ -64,7 +64,7 @@
                         "description": "Create a new document",
                         "enabled": false,
                         "application": "Notepad",
-                        "color": "rgba(69, 183, 209, 0.6)",
+                        "color": "rgba(69, 183, 209, 0.2)",
                         "controller": "pythonkeys",
                         "config": {
                             "action": "send_keys",
@@ -77,7 +77,7 @@
                         "description": "Insert Hello World text",
                         "enabled": true,
                         "application": "Notepad",
-                        "color": "rgba(255, 160, 122, 0.6)",
+                        "color": "rgba(255, 160, 122, 0.2)",
                         "controller": "PythonKeys",
                         "config": {
                             "action": "insert_text",
@@ -90,7 +90,7 @@
                         "description": "Insert a new line",
                         "enabled": false,
                         "application": "Notepad",
-                        "color": "rgba(186, 85, 211, 0.6)",
+                        "color": "rgba(186, 85, 211, 0.2)",
                         "controller": "PythonKeys",
                         "config": {
                             "action": "insert_text",
@@ -103,7 +103,7 @@
                         "description": "ascii Frogs",
                         "enabled": true,
                         "application": "Notepad",
-                        "color": "rgba(76, 175, 80, 0.6)",
+                        "color": "rgba(76, 175, 80, 0.2)",
                         "controller": "PythonKeys",
                         "config": {
                             "action": "insert_text",
@@ -116,7 +116,7 @@
                         "description": "ascii Fish",
                         "enabled": true,
                         "application": "Notepad",
-                        "color": "rgba(33, 150, 243, 0.6)",
+                        "color": "rgba(33, 150, 243, 0.2)",
                         "controller": "PythonKeys",
                         "config": {
                             "action": "insert_text",
@@ -130,7 +130,7 @@
             "id": "boilerplate",
             "name": "Boilerplate Window",
             "html": "src/views/boilerplate/index.html",
-            "enabled": true,
+            "enabled": false,
             "position": {
                 "offset": 1,
                 "xOffset": -610,

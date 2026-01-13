@@ -18,6 +18,16 @@ class SpinWheel {
             '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'
         ];
 
+        // Load background image
+        this.backgroundImage = new window.Image();
+        //todo make dynamic path
+        this.backgroundImage.src = 'shield.png';
+        this.backgroundImageLoaded = false;
+        this.backgroundImage.onload = () => {
+            this.backgroundImageLoaded = true;
+            this.draw();
+        };
+
         // Auto-spin configuration (in milliseconds: 30000 = 30 seconds)
         this.autoSpinInterval = 30000;
         this.autoSpinTimer = null;
@@ -145,10 +155,21 @@ class SpinWheel {
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Draw wheel
+        // Draw wheel and background image in rotated context
         this.ctx.save();
         this.ctx.translate(this.centerX, this.centerY);
         this.ctx.rotate((this.rotation * Math.PI) / 180);
+
+        // Draw background image if loaded (centered)
+        if (this.backgroundImageLoaded) {
+            this.ctx.drawImage(
+                this.backgroundImage,
+                -this.centerX,
+                -this.centerY,
+                this.canvas.width,
+                this.canvas.height
+            );
+        }
 
         const sliceAngle = 360 / this.options.length;
 
@@ -169,6 +190,7 @@ class SpinWheel {
             // Draw text
             this.ctx.save();
             this.ctx.rotate(((i * sliceAngle + sliceAngle / 2) * Math.PI) / 180);
+            // todo: make this dynamic based off a helper function or static option
             this.ctx.rotate(Math.PI); // Flip text 180 degrees
             this.ctx.textAlign = 'left';
             this.ctx.fillStyle = 'white';
