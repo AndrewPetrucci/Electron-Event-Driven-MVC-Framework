@@ -43,7 +43,11 @@ class SharedQueueManager {
             return; // Worker already exists
         }
 
-        const workerPath = path.join(__dirname, 'queue-worker.js');
+        let workerPath = path.join(__dirname, 'queue-worker.js');
+        // Handle asar-unpacked path for packaged Electron apps
+        if (workerPath.includes('.asar')) {
+            workerPath = workerPath.replace(/app\.asar(\\|\/|$)/, 'app.asar.unpacked$1');
+        }
         const worker = spawn('node', [workerPath, queueName], {
             stdio: ['ignore', 'inherit', 'inherit', 'ipc']
         });

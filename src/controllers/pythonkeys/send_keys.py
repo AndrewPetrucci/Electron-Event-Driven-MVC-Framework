@@ -19,7 +19,12 @@ logging.basicConfig(filename='pythonkeys-executor-debug.log', level=logging.INFO
 
 # Helper to process escape sequences
 def process_escape_sequences(s):
-    return s.encode('utf-8').decode('unicode_escape')
+    # Ensure s is treated as a raw string to avoid invalid escape sequence warnings
+    if not s:
+        return s
+    # Replace single backslashes with double backslashes unless already escaped
+    safe_s = s.encode('utf-8').decode('unicode_escape')
+    return safe_s
 
 # Helper to extract value from JSON
 def extract_json_value(json_str, key):
@@ -66,8 +71,13 @@ try:
         logging.info('Text sent via send_keys.')
     logging.info(f'Successfully sent keys: {args.keys} to {args.target}')
 except ElementNotFoundError as e:
-    logging.error(f'Window not found by class name: {args.target} ({e})')
+    error_msg = f'Window not found by class name: {args.target} ({e})'
+    logging.error(error_msg)
+    print(error_msg, file=sys.stderr)
     sys.exit(0)
 except Exception as e:
-    logging.error(f'Error sending keys: {e}', exc_info=True)
+    import traceback
+    error_msg = f'Error sending keys: {e}\n' + traceback.format_exc()
+    logging.error(error_msg)
+    print(error_msg, file=sys.stderr)
     sys.exit(1)

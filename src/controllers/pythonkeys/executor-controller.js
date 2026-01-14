@@ -28,10 +28,38 @@ function executeController(wheelResult, applicationConfigs) {
             console.log(`[PythonKeys] Executing: ${pyScript} with keys: ${keys}, target: ${targetApp}`);
             console.log(`[PythonKeys] With config: ${pythonKeysJson}`);
 
-            // Spawn Python process
-            const pyProcess = spawn('python', [pyScript, '--keys', keys, '--target', targetApp], {
+            // Determine Python executable path
+            let pythonExe = 'python';
+            // If running from packaged app, use the bundled .venv Python
+            // __dirname points to .../dist/win-unpacked/resources/app.asar.unpacked/src/controllers/pythonkeys in production
+            // and .../src/controllers/pythonkeys in development
+            const pathParts = __dirname.split(path.sep);
+            const isPackaged = pathParts.includes('win-unpacked');
+            if (isPackaged) {
+                // Go up to win-unpacked
+                const winUnpackedIdx = pathParts.lastIndexOf('win-unpacked');
+                const baseDir = pathParts.slice(0, winUnpackedIdx + 1).join(path.sep);
+                pythonExe = path.join(baseDir, '.venv', 'Scripts', 'python.exe');
+            }
+            // Spawn Python process and capture stdout/stderr
+            const pyProcess = spawn(pythonExe, [pyScript, '--keys', keys, '--target', targetApp], {
                 detached: false,
-                stdio: 'ignore'
+                stdio: ['ignore', 'pipe', 'pipe']
+            });
+
+            let stdout = '';
+            let stderr = '';
+
+            pyProcess.stdout.on('data', (data) => {
+                const msg = data.toString();
+                stdout += msg;
+                console.log(`[PythonKeys][stdout] ${msg.trim()}`);
+            });
+
+            pyProcess.stderr.on('data', (data) => {
+                const msg = data.toString();
+                stderr += msg;
+                console.error(`[PythonKeys][stderr] ${msg.trim()}`);
             });
 
             pyProcess.on('close', (code) => {
@@ -39,7 +67,8 @@ function executeController(wheelResult, applicationConfigs) {
                 if (code === 0) {
                     resolve();
                 } else {
-                    reject(new Error(`Python script exited with code ${code}`));
+                    const errorMsg = `Python script exited with code ${code}\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}`;
+                    reject(new Error(errorMsg));
                 }
             });
 
@@ -47,8 +76,6 @@ function executeController(wheelResult, applicationConfigs) {
                 console.error(`[PythonKeys] Error spawning process: ${err.message}`);
                 reject(err);
             });
-
-            pyProcess.unref();
         } catch (error) {
             console.error(`[PythonKeys] Error: ${error.message}`);
             reject(error);

@@ -9,6 +9,7 @@
         "dev": "electron . --dev",
         "start:spin": "cross-env AUTO_SPIN=true npm start",
         "build": "electron-builder",
+        "postbuild": "powershell -ExecutionPolicy Bypass -File ./bundle-venv.ps1",
         "pretest": "start npm start",
         "test": "node test-wheel.js",
         "test:render": "node test-wheel-playwright.js"
@@ -25,5 +26,20 @@
         "electron": "latest",
         "electron-builder": "latest",
         "playwright": "^1.57.0"
+    },
+    "build": {
+        "files": [
+            "src/views/shared/queue-worker.js",
+            "src/**",
+            "src/**/*",
+            "main.js",
+            "preload.js",
+            "package.json",
+            "windows-config.json"
+        ],
+        "asarUnpack": [
+            "src/views/shared/queue-worker.js",
+            "src/controllers/pythonkeys/**"
+        ]
     }
 }
