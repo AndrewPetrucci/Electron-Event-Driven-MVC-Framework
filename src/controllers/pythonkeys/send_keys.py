@@ -7,7 +7,12 @@ import pywinauto
 from pywinauto.keyboard import send_keys
 from pywinauto.findwindows import ElementNotFoundError
 import pyperclip
-import win32gui
+
+try:
+    import win32gui # type: ignore
+    has_win32gui = True
+except ImportError:
+    has_win32gui = False
 
 # Setup logging
 logging.basicConfig(filename='pythonkeys-executor-debug.log', level=logging.INFO, format='%(asctime)s %(message)s')
@@ -36,11 +41,15 @@ logging.info(f'Keys: {args.keys}')
 logging.info(f'Target: {args.target}')
 
 try:
+
     logging.info('Attempting to connect to application window by class name...')
     app = pywinauto.Application(backend='win32').connect(class_name=args.target)
     window = app.window(class_name=args.target)
     logging.info(f'Window found: {window}')
-    win32gui.SetForegroundWindow(window.handle)
+    if( has_win32gui ):
+        win32gui.SetForegroundWindow(window.handle)
+    else:
+        window.set_focus()
     logging.info('Window brought to foreground.')
     time.sleep(0.2)
     active_title = window.wrapper_object().window_text()
