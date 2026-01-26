@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>File Watcher</title>
-    <link rel="stylesheet" href="../../shared/window-bar.css">
+    <link rel="stylesheet" href="../shared/window-bar.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -27,24 +27,24 @@
     </div>
 
     <script>
-    // Inject config from main process
-    // This will be replaced by main.js when creating the window
-    window.dataFile = undefined;
-    try {
-        // Electron 12+ contextBridge: use preload to inject config
-        if (window.electron && window.electron.getConfig) {
-            window.electron.getConfig().then(cfg => {
-                if (cfg && cfg.windows) {
-                    const fileWatcherCfg = cfg.windows.find(w => w.id === 'fileWatcher');
-                    if (fileWatcherCfg && fileWatcherCfg.dataFile) {
-                        window.dataFile = fileWatcherCfg.dataFile;
+        // Inject config from main process
+        // This will be replaced by main.js when creating the window
+        window.dataFile = undefined;
+        try {
+            // Electron 12+ contextBridge: use preload to inject config
+            if (window.electron && window.electron.getConfig) {
+                window.electron.getConfig().then(cfg => {
+                    if (cfg && cfg.windows) {
+                        const fileWatcherCfg = cfg.windows.find(w => w.id === 'fileWatcher');
+                        if (fileWatcherCfg && fileWatcherCfg.dataFile) {
+                            window.dataFile = fileWatcherCfg.dataFile;
+                        }
                     }
-                }
-            });
-        }
-    } catch (e) {}
+                });
+            }
+        } catch (e) { }
     </script>
-    <script src="../../shared/window-bar.js"></script>
+    <script src="../shared/window-bar.js"></script>
     <script src="app.js"></script>
 </body>
 

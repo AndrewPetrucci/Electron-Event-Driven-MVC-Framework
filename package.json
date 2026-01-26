@@ -17,9 +17,10 @@
     "author": "Your Name",
     "license": "MIT",
     "dependencies": {
+        "dotenv": "^16.0.0",
         "express": "^5.2.1",
-        "tmi.js": "^1.8.5",
-        "dotenv": "^16.0.0"
+        "strudel": "^1.0.5",
+        "tmi.js": "^1.8.5"
     },
     "devDependencies": {
         "cross-env": "^10.1.0",
