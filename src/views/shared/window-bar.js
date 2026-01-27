@@ -22,6 +22,8 @@ class WindowBar {
         this.initialMouseY = 0;
         this.initialWindowX = 0;
         this.initialWindowY = 0;
+        this.initialWindowWidth = 0;
+        this.initialWindowHeight = 0;
         this.minimizeBtn = element.querySelector('.minimize-btn');
         this.closeBtn = element.querySelector('.close-btn');
 
@@ -87,11 +89,13 @@ class WindowBar {
         // Capture pointer to continue receiving events outside window
         this.element.setPointerCapture(e.pointerId);
 
-        // Get initial window position from main process
+        // Get initial window position and size from main process
         if (window.electron && window.electron.getWindowPosition) {
-            const pos = window.electron.getWindowPosition();
-            this.initialWindowX = pos.x;
-            this.initialWindowY = pos.y;
+            const bounds = window.electron.getWindowPosition();
+            this.initialWindowX = bounds.x;
+            this.initialWindowY = bounds.y;
+            this.initialWindowWidth = bounds.width;
+            this.initialWindowHeight = bounds.height;
         }
 
         e.preventDefault();
@@ -105,7 +109,8 @@ class WindowBar {
             const newX = this.initialWindowX + totalDeltaX;
             const newY = this.initialWindowY + totalDeltaY;
 
-            window.electron.moveWindowTo(newX, newY);
+            // Use the initial width/height captured at drag start
+            window.electron.moveWindowTo(newX, newY, this.initialWindowWidth, this.initialWindowHeight);
             e.preventDefault();
         }
     }

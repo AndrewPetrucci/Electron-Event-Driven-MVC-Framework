@@ -5,6 +5,14 @@
  * Used by WindowBar class in window-bar.js
  */
 
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
 [data-window-bar] {
     cursor: grab;
     user-select: none;
@@ -19,10 +27,22 @@
     color: #8fa3ff;
     display: flex;
     flex-direction: column;
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: 100vh;
     position: relative;
     border: 1px solid #8fa3ff;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .window-bar {
@@ -41,7 +61,6 @@
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.5px;
-    flex: 1;
 }
 
 .button-container {

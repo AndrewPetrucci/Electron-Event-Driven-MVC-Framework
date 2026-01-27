@@ -20,30 +20,20 @@
         </div>
 
         <div class="content">
-            <h1>Strudel Overlay</h1>
-            <p>This overlay uses the Strudel package.</p>
-            <div class="interactive-overlay-element">
-                <button class="action-btn" id="strudelBtn">Run Strudel</button>
+            
+            <div class="button-container">
+                <button class="window-btn play-btn" id="playBtn" title="play">play</button>
+                <button class="window-btn stop-btn" id="stopBtn" title="stop">stop</button>
+                <button class="window-btn update-btn" id="updateBtn" title="update">update</button>
+                <button class="window-btn save-btn" id="saveBtn" title="save">save</button>
+                <button class="window-btn load-btn" id="loadBtn" title="load">load</button>
             </div>
-            <div id="strudel-output"></div>
+            <div id="strudel-container"></div>
         </div>
     </div>
 
     <script src="../shared/window-bar.js"></script>
     <script src="app.js"></script>
-    <script>
-        // Example usage of Strudel (assuming it is available globally or via import)
-        document.getElementById('strudelBtn').addEventListener('click', async () => {
-            let output = document.getElementById('strudel-output');
-            try {
-                // Replace with actual Strudel usage as needed
-                const strudel = await import('strudel');
-                output.textContent = 'Strudel loaded: ' + (strudel ? 'success' : 'fail');
-            } catch (e) {
-                output.textContent = 'Failed to load Strudel: ' + e;
-            }
-        });
-    </script>
 </body>
 
 </html>

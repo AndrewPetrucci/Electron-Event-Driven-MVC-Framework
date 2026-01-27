@@ -66,7 +66,7 @@ const { loadFromExeDir } = require('./src/load-from-exe-dir');
 loadFromExeDir('.env');
 console.log('[DEBUG] TWITCH_CLIENT_ID:', process.env.TWITCH_CLIENT_ID);
 console.log('[DEBUG] TWITCH_CLIENT_SECRET:', process.env.TWITCH_CLIENT_SECRET);
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 
 const path = require('path');
 const fs = require('fs');
@@ -93,18 +93,43 @@ const AUTO_SPIN = process.env.AUTO_SPIN === 'true' || process.argv.includes('--e
 const WINDOW_WIDTH = 600;
 const WINDOW_HEIGHT = 600;
 
-function createWindow(windowConfig = { html: 'src/windows/boilderplate/index.html' }) {
+/**
+ * Helper function to set stored width and height on a window object
+ * @param {BrowserWindow} window - The BrowserWindow instance
+ * @param {number} width - The width to store
+ * @param {number} height - The height to store
+ */
+function setStoredWindowDimensions(window, width, height) {
+    if (window && !window.isDestroyed()) {
+        window._storedWidth = width;
+        window._storedHeight = height;
+    }
+}
+
+function createWindow(windowConfig = { html: 'src/windows/boilderplate/index.html' }, defaults = {}) {
     const htmlFile = windowConfig.html || 'src/windows/boilderplate/index.html';
+    
+    // Merge defaults with window-specific windowConfig
+    const windowOptions = {
+        width: defaults.width ?? WINDOW_WIDTH,
+        height: defaults.height ?? WINDOW_HEIGHT,
+        alwaysOnTop: defaults.alwaysOnTop ?? false,
+        transparent: defaults.transparent ?? false,
+        frame: defaults.frame ?? false,
+        resizable: defaults.resizable ?? true,
+        skipTaskbar: defaults.skipTaskbar ?? false,
+        ...(windowConfig.windowConfig || {}) // Override with window-specific config
+    };
+    
+    // Calculate position
+    const screen = require('electron').screen.getPrimaryDisplay();
+    const x = screen.workAreaSize.width - windowOptions.width;
+    const y = screen.workAreaSize.height - windowOptions.height;
+    
     const window = new BrowserWindow({
-        width: WINDOW_WIDTH,
-        height: WINDOW_HEIGHT,
-        x: require('electron').screen.getPrimaryDisplay().workAreaSize.width - WINDOW_WIDTH,
-        y: require('electron').screen.getPrimaryDisplay().workAreaSize.height - WINDOW_HEIGHT,
-        alwaysOnTop: false,
-        transparent: true,
-        frame: false,
-        resizable: true,
-        skipTaskbar: false,
+        ...windowOptions,
+        x: x,
+        y: y,
         icon: path.join(__dirname, 'assets/icon.png'),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
@@ -116,6 +141,10 @@ function createWindow(windowConfig = { html: 'src/windows/boilderplate/index.htm
 
     const windowId = window.id;
     windows[windowId] = window;
+    
+    // Set stored dimensions using helper function on initialization
+    setStoredWindowDimensions(window, windowOptions.width, windowOptions.height);
+    
     console.log(`Created window with ID: ${windowId} - Loading: ${htmlFile}`);
 
     window.loadFile(htmlFile);
@@ -197,23 +226,28 @@ function registerIpcHandlers() {
         const window = getWindowFromEvent(event);
         if (window) {
             const bounds = window.getBounds();
+            const width = window._storedWidth || bounds.width;
+            const height = window._storedHeight || bounds.height;
             window.setBounds({
                 x: bounds.x + deltaX,
                 y: bounds.y + deltaY,
-                width: WINDOW_WIDTH,
-                height: WINDOW_HEIGHT
+                width: width,
+                height: height
             });
         }
     });
 
-    ipcMain.on('move-window-to', (event, { x, y }) => {
+    ipcMain.on('move-window-to', (event, { x, y, width, height }) => {
         const window = getWindowFromEvent(event);
         if (window) {
+            // Use provided width/height, or fall back to stored values, or current bounds
+            const storedWidth = width !== undefined ? width : (window._storedWidth || window.getBounds().width);
+            const storedHeight = height !== undefined ? height : (window._storedHeight || window.getBounds().height);
             window.setBounds({
                 x: x,
                 y: y,
-                width: WINDOW_WIDTH,
-                height: WINDOW_HEIGHT
+                width: storedWidth,
+                height: storedHeight
             });
         }
     });
@@ -221,8 +255,11 @@ function registerIpcHandlers() {
     ipcMain.on('get-window-position', (event) => {
         const window = getWindowFromEvent(event);
         if (window) {
-            const [x, y] = window.getPosition();
-            event.returnValue = { x, y };
+            const bounds = window.getBounds();
+            // Use stored dimensions if available, otherwise use current bounds
+            const width = window._storedWidth || bounds.width;
+            const height = window._storedHeight || bounds.height;
+            event.returnValue = { x: bounds.x, y: bounds.y, width: width, height: height };
         }
     });
 
@@ -230,6 +267,62 @@ function registerIpcHandlers() {
         const window = getWindowFromEvent(event);
         if (window) {
             window.setSize(width, height);
+            // Update stored dimensions using helper function
+            setStoredWindowDimensions(window, width, height);
+        }
+    });
+
+    // File dialog handlers for strudel save/load
+    ipcMain.handle('show-save-dialog', async (event, options) => {
+        const window = getWindowFromEvent(event);
+        const result = await dialog.showSaveDialog(window || BrowserWindow.getAllWindows()[0], {
+            filters: [
+                { name: 'Text Files', extensions: ['txt'] },
+                { name: 'All Files', extensions: ['*'] }
+            ],
+            ...options
+        });
+        return result;
+    });
+
+    ipcMain.handle('show-open-dialog', async (event, options) => {
+        const window = getWindowFromEvent(event);
+        const result = await dialog.showOpenDialog(window || BrowserWindow.getAllWindows()[0], {
+            filters: [
+                { name: 'Text Files', extensions: ['txt'] },
+                { name: 'All Files', extensions: ['*'] }
+            ],
+            properties: ['openFile'],
+            ...options
+        });
+        return result;
+    });
+
+    ipcMain.handle('write-file', async (event, ...args) => {
+        // Handle both direct args and object format
+        let filePath, content;
+        if (args.length === 2) {
+            [filePath, content] = args;
+        } else if (args.length === 1 && typeof args[0] === 'object') {
+            ({ filePath, content } = args[0]);
+        } else {
+            return { success: false, error: 'Invalid arguments' };
+        }
+        
+        try {
+            fs.writeFileSync(filePath, content, 'utf-8');
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('read-file', async (event, filePath) => {
+        try {
+            const content = fs.readFileSync(filePath, 'utf-8');
+            return { success: true, content: content };
+        } catch (error) {
+            return { success: false, error: error.message };
         }
     });
 
@@ -300,8 +393,9 @@ app.on('ready', () => {
 
     // Create windows from config
     const createdWindows = [];
+    const defaults = ecosystemConfig.defaults || {};
     windowsToCreate.forEach((windowConfig, index) => {
-        const windowId = createWindow(windowConfig);
+        const windowId = createWindow(windowConfig, defaults);
         createdWindows.push({ id: windowId, config: windowConfig });
         windowConfigs.set(windowConfig.id, { windowId: windowId, config: windowConfig });
         console.log(`[Main] Created window "${windowConfig.name}" (ID: ${windowId}) from ${windowConfig.html}`);
@@ -314,6 +408,20 @@ app.on('ready', () => {
             window.webContents.once('did-finish-load', () => {
                 window.webContents.send('load-wheel-options', windowConfig?.options?.wheel);
                 console.log(`[Main] Sent ${windowConfig?.options?.wheel.length} wheel options to wheel window`);
+                
+                // Send connection status if token is available
+                if (savedToken || process.env.TWITCH_OAUTH_TOKEN) {
+                    window.webContents.send('twitch-status-changed', { isConnected: true });
+                    console.log(`[Main] Sent connected status to wheel window (token available)`);
+                }
+            });
+        } else if (windowConfig.id === 'wheel') {
+            // Even if no wheel options, still send connection status
+            window.webContents.once('did-finish-load', () => {
+                if (savedToken || process.env.TWITCH_OAUTH_TOKEN) {
+                    window.webContents.send('twitch-status-changed', { isConnected: true });
+                    console.log(`[Main] Sent connected status to wheel window (token available)`);
+                }
             });
         }
 

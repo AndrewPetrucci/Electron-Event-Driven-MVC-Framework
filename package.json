@@ -19,7 +19,9 @@
     "dependencies": {
         "dotenv": "^16.0.0",
         "express": "^5.2.1",
-        "strudel": "^1.0.5",
+        "@strudel/core": "^1.0.0",
+        "@strudel/transpiler": "^1.0.0",
+        "@strudel/webaudio": "^1.0.0",
         "tmi.js": "^1.8.5"
     },
     "devDependencies": {

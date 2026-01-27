@@ -4,12 +4,13 @@
             "id": "twitch",
             "name": "Twitch Window",
             "html": "src/views/oauthConnections/index.html",
-            "enabled": true,
+            "enabled": false,
             "position": {
                 "offset": 1,
                 "xOffset": -610,
                 "yOffset": 0
             },
+            "windowConfig": {},
             "options": {
                 "buttons": [
                     {
@@ -24,11 +25,14 @@
             "id": "wheel",
             "name": "Twitch Wheel!!!",
             "html": "src/views/wheel/index.html",
-            "enabled": true,
+            "enabled": false,
             "position": {
                 "offset": 0,
                 "xOffset": 0,
                 "yOffset": 0
+            },
+            "windowConfig": {
+                "transparent": true
             },
             "options": {
                 "wheel": [
@@ -136,6 +140,7 @@
                 "xOffset": -610,
                 "yOffset": 0
             },
+            "windowConfig": {},
             "options": {
                 "buttons": [
                     {
@@ -156,6 +161,7 @@
                 "xOffset": 0,
                 "yOffset": 0
             },
+            "windowConfig": {},
             "options": {
                 "buttons": [
                     {
@@ -178,13 +184,28 @@
                 "xOffset": 0,
                 "yOffset": 0
             },
+            "windowConfig": {},
             "dataFile": "tmp/sticky-output.json",
             "options": {}
+        },
+        {
+            "id": "strudel",
+            "name": "Strudel Window",
+            "html": "src/views/strudel/index.html",
+            "enabled": true,
+            "position": {
+                "offset": 1,
+                "xOffset": -1600,
+                "yOffset": 0
+            },
+            "windowConfig": {},
+            "options": {
+            }
         }
     ],
     "defaults": {
-        "width": 600,
-        "height": 600,
+        "width": 1600,
+        "height": 900,
         "alwaysOnTop": true,
         "transparent": true,
         "frame": false,

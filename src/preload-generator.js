@@ -121,13 +121,13 @@ function mergeAPIs(api, windowType, apiDefinitions) {
  * These are APIs that are registered in main.js's registerIpcHandlers()
  */
 function addCoreAPIs(apiDefinitions) {
-    const { send, sendSync, invoke, on } = require('./preload-helpers');
+    const { send, sendSync, invoke, invokeWithArgs, on } = require('./preload-helpers');
     
     // Core window management APIs (always available from main.js)
     const coreAPIs = {
         mouseOverInteractive: send('mouse-over-interactive', 'isOver'),
         moveWindowBy: send('move-window', 'deltaX, deltaY'),
-        moveWindowTo: send('move-window-to', 'x, y'),
+        moveWindowTo: send('move-window-to', 'x, y, width, height'),
         getWindowPosition: sendSync('get-window-position'),
         resizeWindow: send('resize-window', 'width, height'),
         minimizeWindow: send('minimize-window'),
@@ -135,6 +135,11 @@ function addCoreAPIs(apiDefinitions) {
         getAutoSpinConfig: invoke('get-auto-spin-config'),
         getConfig: invoke('get-config'),
         sendMessage: '(channel, data) => ipcRenderer.send(channel, data)',
+        // File dialog APIs
+        showSaveDialog: invokeWithArgs('show-save-dialog', 'options'),
+        showOpenDialog: invokeWithArgs('show-open-dialog', 'options'),
+        writeFile: invokeWithArgs('write-file', 'filePath, content'),
+        readFile: invokeWithArgs('read-file', 'filePath'),
         // Wheel APIs (handled in main.js)
         spinWheel: send('spin-wheel', 'result', true), // Send result directly, don't wrap
         onSpinResult: on('spin-result'),
