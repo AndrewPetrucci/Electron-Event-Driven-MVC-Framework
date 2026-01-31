@@ -4,49 +4,6 @@
  * This is the main application logic for the Strudel window.
  */
 
-function registerStrudelGrammar() {
-    if (typeof Prism === 'undefined') return;
-    Prism.languages.strudel = {
-        comment: { pattern: /\/\/.*/, greedy: true },
-        string: [
-            { pattern: /"(?:[^"\\]|\\.)*"/, greedy: true },
-            { pattern: /'(?:[^'\\]|\\.)*'/, greedy: true },
-            { pattern: /`(?:[^`\\]|\\.)*`/, greedy: true },
-        ],
-        number: /%-?\d+|\b\d+\.?\d*\b/,
-        'repl-prefix': /\$:/,
-        keyword: /\b(?:cps|sound|samples|note|stack|struct|every|slow|fast|gain|speed|rev|chord|scale|m|n|s|rand|segment|cat|append|off|layer|superimpose|jux|juxBy|iter|palindrome|rotate|chunk|substruct|ply|trigger|when|fix|linger|early|late|stretch|compress|trunc|iterate|squeeze|slice|fit|scrub|drop|take)\b/,
-        operator: /[.\[\](){},:~@#-]/,
-    };
-}
-
-function loadScript(src) {
-    return new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = src;
-        s.onload = () => resolve();
-        s.onerror = () => reject(new Error('Failed to load: ' + src));
-        document.head.appendChild(s);
-    });
-}
-
-function ensurePrism() {
-    if (typeof Prism !== 'undefined' && Prism.languages.strudel) return Promise.resolve();
-    if (typeof Prism !== 'undefined') {
-        registerStrudelGrammar();
-        return Promise.resolve();
-    }
-    console.warn('[StrudelApp] Prism not loaded from static script, loading from CDN…');
-    return loadScript('https://unpkg.com/prismjs@1.29.0/prism.min.js')
-        .then(() => {
-            registerStrudelGrammar();
-            console.log('[StrudelApp] Prism loaded from CDN');
-        })
-        .catch((e) => {
-            console.error('[StrudelApp] Prism CDN fallback failed:', e);
-        });
-}
-
 /**
  * Open documents data structure.
  * Each document: { id, filePath?, name, content, lastSavedContent, unsaved }
@@ -67,7 +24,6 @@ class StrudelApp {
         this.strudelInstance = null;
         this.currentStackedPattern = null;
         this.currentPatterns = [];
-        this._highlightDebounce = null;
         this._patternVisualizations = new Map(); // pattern index -> { canvas, container, lineNumber }
         /** @type {Array<{ id: string, filePath: string|null, name: string, content: string, lastSavedContent: string, unsaved: boolean }>} */
         this.openDocuments = [];
@@ -88,167 +44,203 @@ class StrudelApp {
             const strudelCore = await import('@strudel/core');
             const strudelTranspiler = await import('@strudel/transpiler');
             const strudelWebaudio = await import('@strudel/webaudio');
-            
-            const { repl, evalScope } = strudelCore;
+
+            const { repl, evalScope, setTime } = strudelCore;
+            // Ensure getTime() has a value before @strudel/draw runs (repl overwrites with scheduler.now() on evaluate)
+            if (typeof setTime === 'function') setTime(() => 0);
             const { transpiler } = strudelTranspiler;
-            const { getAudioContext, webaudioOutput, initAudioOnFirstClick } = strudelWebaudio;
-            
+            this.strudelTranspiler = transpiler;
+            const { getAudioContext, webaudioOutput, initAudioOnFirstClick, registerSynthSounds } = strudelWebaudio;
+
             // Initialize audio context
             const ctx = getAudioContext();
             initAudioOnFirstClick();
-            
-            // Set up eval scope with all Strudel modules
+            // Register default synths (sawtooth, sine, triangle, square, etc.) so .s("sawtooth") etc. work
+            registerSynthSounds();
+
+            // Use same strudelCore so draw package and patches share one instance
             await evalScope(
-                import('@strudel/core'),
+                strudelCore,
                 import('@strudel/mini'),
                 import('@strudel/webaudio'),
                 import('@strudel/tonal'),
                 import('@strudel/draw')
             );
-            
-            // Create repl with transpiler
-            const { evaluate } = repl({
+
+            // Provide a hidden default canvas so getDrawContext() (no args) never creates the visible fullscreen one
+            if (!document.getElementById('test-canvas')) {
+                const defaultCanvas = document.createElement('canvas');
+                defaultCanvas.id = 'test-canvas';
+                defaultCanvas.width = 1;
+                defaultCanvas.height = 1;
+                defaultCanvas.style.cssText = 'position:fixed;left:-9999px;width:1px;height:1px;pointer-events:none;visibility:hidden';
+                document.body.appendChild(defaultCanvas);
+            }
+
+            // Wrap Pattern.prototype.draw to log errors and haps count (diagnostic)
+            const { Pattern } = strudelCore;
+            const origDraw = Pattern.prototype.draw;
+            if (typeof origDraw === 'function') {
+                Pattern.prototype.draw = function (fn, options) {
+                    const wrappedFn = (...args) => fn(...args);
+                    try {
+                        return origDraw.call(this, wrappedFn, options);
+                    } catch (e) {
+                        console.warn('[StrudelApp] draw() error (getTime or queryArc may have failed):', e);
+                        return this;
+                    }
+                };
+            }
+            // Create repl with transpiler; afterEval/onToggle for active-tag highlighting in CodeMirror
+            const self = this;
+            const { evaluate, stop, scheduler } = repl({
                 defaultOutput: webaudioOutput,
                 getTime: () => ctx.currentTime,
                 transpiler,
+                afterEval: (options) => {
+                    if (self.cmView && options.meta?.miniLocations != null && self.strudelTranspiler) {
+                        self._applyEditorMiniLocationsAndMap(options.meta.miniLocations);
+                    }
+                },
+                onToggle: (started) => {
+                    if (started) self.startHighlightLoop();
+                    else self.stopHighlightLoop();
+                },
             });
-            
-            // Store evaluate function for later use
+
+            // Store evaluate, stop, and scheduler for later use
             this.strudelEvaluate = evaluate;
+            this.strudelStop = stop;
+            this.strudelScheduler = scheduler;
             this.audioContext = ctx;
-            
-            // Configure visualization container
-            this.setupVisualizer();
-            
+
             await this.initializeStrudelEditor();
             console.log('[StrudelApp] Strudel initialized with transpiler');
         } catch (error) {
-            console.warn('[StrudelApp] Failed to load Strudel with transpiler, falling back to @strudel/web:', error);
-            this.initStrudelFromWeb();
+            console.warn('[StrudelApp] Failed to load Strudel from node_modules:', error);
+            console.warn('[StrudelApp] Run "npm run build:strudel" then "npm start" to use the bundled Strudel and CodeMirror.');
+            await this.initializeStrudelEditor();
         }
-    }
-
-    /**
-     * Fallback: Initialize Strudel using @strudel/web (simpler but may not handle all cases)
-     */
-    initStrudelFromWeb() {
-        if (typeof initStrudel === 'function') {
-            this.initializeStrudelEditor().catch((e) => console.error('[StrudelApp] initStrudelEditor failed:', e));
-            return;
-        }
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/@strudel/web@latest';
-        script.onload = () => {
-            if (typeof initStrudel === 'function') {
-                this.initializeStrudelEditor().catch((e) => console.error('[StrudelApp] initStrudelEditor failed:', e));
-            } else {
-                console.error('[StrudelApp] initStrudel function not available after loading script');
-            }
-        };
-        script.onerror = () => console.error('[StrudelApp] Failed to load Strudel from CDN');
-        document.head.appendChild(script);
-    }
-
-    /**
-     * Set up the visualizer container for pattern visualizations.
-     * @strudel/draw looks for #test-canvas; if missing it creates one on document.body
-     * (which can end up behind our layout). We create the canvas here so rendering
-     * goes into our container.
-     */
-    setupVisualizer() {
-        const visualizerContainer = document.getElementById('strudel-visualizer');
-        if (!visualizerContainer) return;
-
-        // If draw package already created a canvas on body, move it into our container
-        let canvas = document.getElementById('test-canvas');
-        if (canvas && canvas.parentElement !== visualizerContainer) {
-            canvas.remove();
-            canvas = null;
-        }
-        if (!canvas) {
-            canvas = document.createElement('canvas');
-            canvas.id = 'test-canvas';
-            canvas.setAttribute('aria-hidden', 'true');
-            visualizerContainer.appendChild(canvas);
-        }
-
-        const resizeCanvas = () => {
-            const rect = visualizerContainer.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = Math.floor(rect.width * dpr);
-            canvas.height = Math.floor(rect.height * dpr);
-            canvas.style.width = rect.width + 'px';
-            canvas.style.height = rect.height + 'px';
-        };
-
-        resizeCanvas();
-        const ro = new ResizeObserver(resizeCanvas);
-        ro.observe(visualizerContainer);
-        this._visualizerResizeObserver = ro;
-        console.log('[StrudelApp] Visualizer container ready (#test-canvas in #strudel-visualizer)');
     }
 
     /**
      * Initialize the Strudel editor after Strudel is available.
-     * Textarea + highlight overlay; syntax coloring via HTML + CSS (Prism tokens).
      */
     async initializeStrudelEditor() {
         try {
-            await ensurePrism();
             await this.restoreOpenFiles();
             if (!this.strudelEvaluate && typeof initStrudel === 'function') {
                 this.strudelInstance = initStrudel({});
             }
 
+            const root = document.getElementById('strudel-cm-root');
             const textarea = document.getElementById('strudel-editor');
-            const mirror = document.getElementById('strudel-mirror');
-            const code = mirror ? mirror.querySelector('code') : null;
-            if (!textarea || !mirror || !code) {
-                console.warn('[StrudelApp] strudel-editor or strudel-mirror not found');
+            if (!root || !textarea) {
+                console.warn('[StrudelApp] strudel-cm-root or strudel-editor not found');
                 return;
             }
 
-            const self = this;
-            const scheduleHighlight = () => {
-                if (self._highlightDebounce) clearTimeout(self._highlightDebounce);
-                self._highlightDebounce = setTimeout(() => {
-                    self._highlightDebounce = null;
-                    self.updateMirror();
-                }, 80);
-            };
+            const activeDoc = this.activeDocumentId
+                ? this.openDocuments.find((d) => d.id === this.activeDocumentId)
+                : null;
+            const initialCode = activeDoc ? activeDoc.content : '';
 
-            textarea.addEventListener('input', () => {
-                self.onStrudelUpdate();
-                scheduleHighlight();
-                self.syncEditorToActiveDocument();
-            });
-            textarea.addEventListener('change', () => {
-                self.onStrudelUpdate();
-                self.syncEditorToActiveDocument();
-            });
-            textarea.addEventListener('scroll', () => self.syncMirrorScroll());
+            try {
+                const { initEditor, toggleLineComment } = await import('@strudel/codemirror');
+                this._toggleLineComment = toggleLineComment;
+                const self = this;
+                this.cmView = initEditor({
+                    root,
+                    initialCode,
+                    onChange: (v) => {
+                        if (v.docChanged) {
+                            self.onStrudelUpdate();
+                            self.syncEditorToActiveDocument();
+                        }
+                    },
+                    onEvaluate: () => this.playStrudelContent(),
+                    onStop: () => this.stopStrudelContent(),
+                });
 
-            // Add Ctrl+/ (Cmd+/ on Mac) to toggle comments on selected lines
-            // Add Ctrl+S (Cmd+S on Mac) to save current document
-            textarea.addEventListener('keydown', (e) => {
-                if ((e.ctrlKey || e.metaKey) && e.key === '/') {
-                    e.preventDefault();
-                    self.toggleComments();
-                } else if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                    e.preventDefault();
-                    self.saveStrudelContent();
-                }
-            });
+                root.addEventListener('keydown', (e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                        e.preventDefault();
+                        self.saveStrudelContent();
+                    }
+                    if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+                        e.preventDefault();
+                        self._toggleLineComment(self.cmView);
+                    }
+                });
 
-            this.updateMirror();
-            if (this.activeDocumentId) {
-                const doc = this.openDocuments.find((d) => d.id === this.activeDocumentId);
-                if (doc) this.setEditorContent(doc.content);
+                textarea.style.display = 'none';
+                console.log('[StrudelApp] Strudel editor initialized (CodeMirror)');
+            } catch (cmError) {
+                console.warn('[StrudelApp] CodeMirror not available, using textarea:', cmError);
+                root.style.display = 'none';
+                textarea.style.display = 'block';
+                const self = this;
+                textarea.addEventListener('input', () => {
+                    self.onStrudelUpdate();
+                    self.syncEditorToActiveDocument();
+                });
+                textarea.addEventListener('change', () => {
+                    self.onStrudelUpdate();
+                    self.syncEditorToActiveDocument();
+                });
+                textarea.addEventListener('keydown', (e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                        e.preventDefault();
+                        self.saveStrudelContent();
+                    }
+                    if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+                        e.preventDefault();
+                        self.toggleComments();
+                    }
+                });
+                this.setEditorContent(initialCode);
+                console.log('[StrudelApp] Strudel editor initialized (textarea fallback)');
             }
-            console.log('[StrudelApp] Strudel editor initialized (textarea + overlay)');
         } catch (error) {
             console.error('[StrudelApp] Error initializing Strudel editor:', error);
         }
+    }
+
+    /**
+     * Return the editor element for measurements/scroll (textarea or CodeMirror adapter).
+     */
+    getEditorElement() {
+        if (this.cmView) {
+            if (!this._cmEditorAdapter) {
+                const view = this.cmView;
+                const scroller = view.dom.querySelector('.cm-scroller');
+                this._cmEditorAdapter = {
+                    get value() {
+                        return view.state.doc.toString();
+                    },
+                    get scrollTop() {
+                        return scroller ? scroller.scrollTop : 0;
+                    },
+                    get scrollLeft() {
+                        return scroller ? scroller.scrollLeft : 0;
+                    },
+                    contentDOM: view.contentDOM,
+                    closest(sel) {
+                        return view.dom.closest(sel);
+                    },
+                    addEventListener(ev, fn) {
+                        if (scroller && ev === 'scroll') scroller.addEventListener(ev, fn);
+                        else view.dom.addEventListener(ev, fn);
+                    },
+                    removeEventListener(ev, fn) {
+                        if (scroller && ev === 'scroll') scroller.removeEventListener(ev, fn);
+                        else view.dom.removeEventListener(ev, fn);
+                    },
+                };
+            }
+            return this._cmEditorAdapter;
+        }
+        return document.getElementById('strudel-editor');
     }
 
     /**
@@ -448,7 +440,6 @@ class StrudelApp {
         if (!doc) return;
         this.activeDocumentId = docId;
         this.setEditorContent(doc.content);
-        this.updateMirror();
         this.renderOpenDocs();
         this.persistOpenFiles();
     }
@@ -472,24 +463,18 @@ class StrudelApp {
         });
     }
 
-    /**
-     * Sync mirror scroll position to match textarea.
-     */
-    syncMirrorScroll() {
-        const ta = document.getElementById('strudel-editor');
-        const mirror = document.getElementById('strudel-mirror');
-        if (ta && mirror) {
-            mirror.scrollTop = ta.scrollTop;
-            mirror.scrollLeft = ta.scrollLeft;
-        }
-    }
 
     /**
      * Toggle comments on selected lines (Ctrl+/ or Cmd+/)
      */
     toggleComments() {
-        const textarea = document.getElementById('strudel-editor');
+        if (this.cmView && this._toggleLineComment) {
+            this._toggleLineComment(this.cmView);
+            return;
+        }
+        const textarea = this.getEditorElement();
         if (!textarea) return;
+        if (this.cmView) return; // already handled at top
 
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
@@ -576,80 +561,27 @@ class StrudelApp {
         // Trigger update
         textarea.dispatchEvent(new Event('input', { bubbles: true }));
         textarea.dispatchEvent(new Event('change', { bubbles: true }));
-        this.updateMirror();
-    }
-
-    /**
-     * Update highlight overlay from textarea content (Prism → mirror).
-     * Also re-inserts visualizations at the correct positions.
-     */
-    updateMirror() {
-        const ta = document.getElementById('strudel-editor');
-        const mirror = document.getElementById('strudel-mirror');
-        const code = mirror ? mirror.querySelector('code') : null;
-        if (!ta || !code) return;
-        const raw = ta.value || '';
-        
-        // Store existing visualizations temporarily
-        const existingViz = Array.from(this._patternVisualizations.entries());
-        
-        try {
-            if (typeof Prism !== 'undefined' && Prism.languages.strudel) {
-                code.innerHTML = Prism.highlight(raw, Prism.languages.strudel, 'strudel');
-            } else {
-                if (typeof Prism === 'undefined') {
-                    console.warn('[StrudelApp] Prism not loaded; no syntax highlighting.');
-                } else if (!Prism.languages.strudel) {
-                    console.warn('[StrudelApp] Prism strudel grammar not loaded; no syntax highlighting.');
-                }
-                code.textContent = raw;
-            }
-        } catch (e) {
-            console.warn('[StrudelApp] Prism highlight error:', e);
-            code.textContent = raw;
-        }
-        
-        // Re-insert visualizations after the code element
-        existingViz.forEach(([index, viz]) => {
-            if (viz.container && !viz.container.parentElement) {
-                // Visualization was removed during innerHTML update, re-insert it
-                if (code.nextSibling) {
-                    mirror.insertBefore(viz.container, code.nextSibling);
-                } else {
-                    mirror.appendChild(viz.container);
-                }
-                // Trigger resize
-                setTimeout(() => {
-                    const dpr = window.devicePixelRatio || 1;
-                    const rect = viz.container.getBoundingClientRect();
-                    if (rect.width > 0 && rect.height > 0) {
-                        viz.canvas.width = Math.floor(rect.width * dpr);
-                        viz.canvas.height = Math.floor(rect.height * dpr);
-                        viz.canvas.style.width = rect.width + 'px';
-                        viz.canvas.style.height = rect.height + 'px';
-                        if (viz.ctx) {
-                            viz.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-                        }
-                    }
-                }, 0);
-            }
-        });
-        
-        this.syncMirrorScroll();
     }
 
     getEditorContent() {
+        if (this.cmView) return this.cmView.state.doc.toString();
         const ta = document.getElementById('strudel-editor');
         if (ta && ta.tagName === 'TEXTAREA') return ta.value || '';
         return null;
     }
 
     setEditorContent(content) {
+        if (this.cmView) {
+            const text = content != null ? String(content) : '';
+            this.cmView.dispatch({
+                changes: { from: 0, to: this.cmView.state.doc.length, insert: text },
+            });
+            return true;
+        }
         const ta = document.getElementById('strudel-editor');
         if (!ta || ta.tagName !== 'TEXTAREA') return false;
         const text = content != null ? String(content) : '';
         ta.value = text;
-        this.updateMirror();
         ta.dispatchEvent(new Event('input', { bubbles: true }));
         ta.dispatchEvent(new Event('change', { bubbles: true }));
         return true;
@@ -674,6 +606,149 @@ class StrudelApp {
         const ok = this.setEditorContent(content);
         if (!ok) console.warn('[StrudelApp] Could not set editor content');
         return ok;
+    }
+
+    /**
+     * Parse editor content into $: blocks with segment mapping (patternCode offset -> document offset).
+     * Used to map playCode mini locations (from repl) to editor positions for correct highlight.
+     * @param {string} code - Full editor document content
+     * @returns {{ code: string, segments: Array<{ patternFrom: number, patternTo: number, docFrom: number, docTo: number }> }[]}
+     */
+    getDollarBlocksWithSegments(code) {
+        const lines = code.split('\n');
+        const blocks = [];
+        let i = 0;
+        while (i < lines.length) {
+            const line = lines[i];
+            const trimmedLine = line.trim();
+            if (trimmedLine.startsWith('//')) {
+                const uncommented = trimmedLine.slice(2).trim();
+                if (uncommented.startsWith('$:')) {
+                    i++;
+                    continue;
+                }
+                i++;
+                continue;
+            }
+            if (!trimmedLine.startsWith('$:')) {
+                i++;
+                continue;
+            }
+            const startLineIndex = i;
+            let patternCode = trimmedLine.slice(2).trim().replace(/\.play\(\);?$/, '');
+            const lineStarts = []; // doc offset of start of each line
+            for (let k = 0; k <= i; k++) lineStarts.push(lines.slice(0, k).join('\n').length);
+            const codeStartOnFirstLine = lines[i].match(/^\s*\$:\s*/)?.[0].length ?? 0;
+            let docStart = lineStarts[i] + codeStartOnFirstLine;
+            const segments = [{ patternFrom: 0, patternTo: patternCode.length, docFrom: docStart, docTo: docStart + patternCode.length }];
+            i++;
+            while (i < lines.length) {
+                const next = lines[i].trim();
+                const nextLine = lines[i];
+                if (!next) { i++; continue; }
+                if (next.startsWith('//') || next.startsWith('$:')) break;
+                const isContinuation = /^\s*\./.test(nextLine) || (patternCode && !/^\s*[a-zA-Z_$]/.test(next));
+                if (!isContinuation) break;
+                const partStartInDoc = lines.slice(0, i).join('\n').length;
+                const leadingSpaces = nextLine.length - nextLine.trimStart().length;
+                const partDocFrom = partStartInDoc + leadingSpaces;
+                const partDocTo = partDocFrom + next.trim().length;
+                const patternFrom = patternCode.length;
+                patternCode += ' ' + next.trim();
+                const patternTo = patternCode.length;
+                segments.push({ patternFrom, patternTo, docFrom: partDocFrom, docTo: partDocTo });
+                i++;
+            }
+            if (patternCode) blocks.push({ code: patternCode, segments });
+        }
+        return blocks;
+    }
+
+    /**
+     * Map a range [from, to] in patternCode to document range using segments.
+     */
+    _mapPatternRangeToDoc(segments, from, to) {
+        let docFrom = from;
+        let docTo = to;
+        for (const seg of segments) {
+            if (from >= seg.patternFrom && from < seg.patternTo)
+                docFrom = seg.docFrom + (from - seg.patternFrom);
+            if (to > seg.patternFrom && to <= seg.patternTo)
+                docTo = seg.docTo - (seg.patternTo - to);
+        }
+        return [docFrom, docTo];
+    }
+
+    /**
+     * Compute mini locations in editor document coordinates and a map from playCode location id to editor range.
+     * Call after eval; uses current editor content and playCode miniLocations from meta.
+     */
+    _applyEditorMiniLocationsAndMap(playCodeMiniLocations) {
+        if (!this.cmView || !this.strudelTranspiler) return;
+        const editorContent = this.cmView.state.doc.toString();
+        const blocks = this.getDollarBlocksWithSegments(editorContent);
+        const editorMiniLocations = [];
+        const playCodeToEditorMap = new Map();
+        let playCodeIndex = 0;
+        for (const block of blocks) {
+            try {
+                const { miniLocations: blockLocs } = this.strudelTranspiler(block.code, { emitMiniLocations: true });
+                if (!blockLocs || !blockLocs.length) continue;
+                // Merge only when the merged slice has no space, so "breaks125" → one span but "0 1 1" → separate leaves (each highlights on its own step).
+                const indexed = blockLocs.map((r, i) => ({ range: r, index: i }));
+                indexed.sort((a, b) => a.range[0] - b.range[0]);
+                const merged = [];
+                const mergedGroups = [];
+                for (const { range: [from, to], index: i } of indexed) {
+                    const wouldMerge = merged.length > 0 && from <= merged[merged.length - 1][1] + 1;
+                    const last = merged.length > 0 ? merged[merged.length - 1] : null;
+                    const mergedSlice = last ? block.code.slice(Math.min(last[0], from), Math.max(last[1], to)) : block.code.slice(from, to);
+                    const mergeAllowed = !mergedSlice.includes(' ');
+                    if (merged.length === 0 || !wouldMerge || !mergeAllowed) {
+                        merged.push([from, to]);
+                        mergedGroups.push([i]);
+                    } else {
+                        last[0] = Math.min(last[0], from);
+                        last[1] = Math.max(last[1], to);
+                        mergedGroups[merged.length - 1].push(i);
+                    }
+                }
+                for (let k = 0; k < merged.length; k++) {
+                    const [from, to] = merged[k];
+                    const blockRanges = mergedGroups[k].map((i) => blockLocs[i]);
+                    const blockSlice = block.code.slice(from, to);
+                    let [docFrom, docTo] = this._mapPatternRangeToDoc(block.segments, from, to);
+                    const beforeDiscount = [docFrom, docTo];
+                    let discountApplied = false;
+                    // Shift position only to skip opening delimiter when range starts with one
+                    const skipOpeningDelimiters = ['"', '<', '{', ' ', '%'];
+                    const firstChar = docTo > docFrom ? editorContent.slice(docFrom, docFrom + 1) : '';
+                    if (skipOpeningDelimiters.includes(firstChar)) {
+                        docFrom += 1;
+                        docTo += 1;
+                        discountApplied = true;
+                    }
+                    editorMiniLocations.push([docFrom, docTo]);
+                    const tokenText = editorContent.slice(docFrom, docTo);
+                    const tokenNum = editorMiniLocations.length;
+                    console.log(`[StrudelApp] highlighted token #${tokenNum}: [${docFrom}, ${docTo}] "${tokenText.replace(/\n/g, '\\n')}" (${mergedGroups[k].length} leaf/leaves)`);
+                    console.log(`[StrudelApp]   token #${tokenNum} chain: blockRanges=${JSON.stringify(blockRanges)} → merged block [${from},${to}] → block slice "${blockSlice.replace(/\n/g, '\\n')}" → _mapPatternRangeToDoc [${beforeDiscount[0]},${beforeDiscount[1]}]${discountApplied ? ` → quote discount → [${docFrom},${docTo}]` : ''}`);
+                    for (const i of mergedGroups[k]) {
+                        if (playCodeIndex + i < playCodeMiniLocations.length) {
+                            const [pcFrom, pcTo] = playCodeMiniLocations[playCodeIndex + i];
+                            playCodeToEditorMap.set(`${pcFrom}:${pcTo}`, { start: docFrom, end: docTo });
+                        }
+                    }
+                }
+                playCodeIndex += blockLocs.length;
+            } catch (_) {
+                // block might not be valid JS; skip
+            }
+        }
+        this._playCodeToEditorMap = playCodeToEditorMap;
+        import('@strudel/codemirror').then(({ updateMiniLocations }) => {
+            updateMiniLocations(this.cmView, editorMiniLocations);
+        });
     }
 
     /**
@@ -781,8 +856,8 @@ class StrudelApp {
                 await new Promise(resolve => setTimeout(resolve, 300));
             }
 
-            // Clear previous visualizations
-            this.clearPatternVisualizations();
+            // Clear previous visualizations (and stop their draw animation frames)
+            await this.clearPatternVisualizations();
 
             // Then, execute all $: lines concurrently (at the same time)
             // Following the Strudel REPL example: use stack() to combine patterns and play them together
@@ -797,7 +872,7 @@ class StrudelApp {
                         // - In Strudel docs, the "_" prefixed visuals (e.g. ._pianoroll()) are "inline"
                         //   and rely on a rich code editor integration. Our textarea editor can't render
                         //   inline visuals, so we normalize them to the global variants (e.g. .pianoroll()).
-                        // - Also: evaluate() alone doesn't start audio; we need to call .play().
+                        // - The repl's evaluate(code, autostart) evaluates code to a Pattern and starts via setPattern(); do not append .play().
 
                         // Create visualizations first so we can inject ctx
                         const normalized = dollarLines.map((item, index) => {
@@ -809,47 +884,39 @@ class StrudelApp {
                                 .replace(/\._spectrum\b/g, '.spectrum')
                                 .replace(/\._pitchwheel\b/g, '.pitchwheel');
                             
-                            // If this pattern has a visualization, create canvas and inject ctx + unique id
+                            // If this pattern has a visualization, create canvas (id strudel-viz-N) and inject ctx via getDrawContext (same API as top canvas)
                             if (item.hasVisualization) {
                                 console.log(`[StrudelApp] Creating visualization for pattern ${index + 1} at line ${item.lineNumber + 1}`);
-                                const viz = this.createPatternVisualization(index, item.lineNumber, s);
-                                if (viz && viz.ctx) {
-                                    const ctxRef = `window.__strudelVizCtx${index}`;
-                                    const vizId = index + 1; // Unique id so each pattern keeps its own animation
-                                    window[ctxRef] = viz.ctx;
-                                    console.log(`[StrudelApp] Injected ctx for pattern ${index + 1}: ${ctxRef}, id: ${vizId}`);
-                                    // Inject .tag(id) before viz so haps are not filtered out; inject ctx and id
-                                    s = s.replace(
-                                        /\.(pianoroll|punchcard|spiral|scope|spectrum|pitchwheel)\s*\(([^)]*)\)/g,
-                                        (match, vizType, args) => {
-                                            let opts = '';
-                                            if (!args || args.trim() === '') {
-                                                opts = `{ ctx: ${ctxRef}, id: ${vizId} }`;
+                                this.createPatternVisualization(index, item.lineNumber, s);
+                                const vizId = index + 1;
+                                const canvasId = `'strudel-viz-${index}'`;
+                                s = s.replace(
+                                    /\.(pianoroll|punchcard|spiral|scope|spectrum|pitchwheel)\s*\(([^)]*)\)/g,
+                                    (match, vizType, args) => {
+                                        let opts = '';
+                                        if (!args || args.trim() === '') {
+                                            opts = `{ ctx: getDrawContext(${canvasId}), id: ${vizId} }`;
+                                        } else {
+                                            const trimmed = args.trim();
+                                            if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+                                                const inner = trimmed.slice(1, -1).trim();
+                                                opts = `{ ${inner ? inner + ', ' : ''}ctx: getDrawContext(${canvasId}), id: ${vizId} }`;
                                             } else {
-                                                const trimmed = args.trim();
-                                                if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-                                                    const inner = trimmed.slice(1, -1).trim();
-                                                    opts = `{ ${inner ? inner + ', ' : ''}ctx: ${ctxRef}, id: ${vizId} }`;
-                                                } else {
-                                                    opts = `Object.assign(${trimmed}, { ctx: ${ctxRef}, id: ${vizId} })`;
-                                                }
+                                                opts = `Object.assign(${trimmed}, { ctx: getDrawContext(${canvasId}), id: ${vizId} })`;
                                             }
-                                            return `.tag(${vizId}).${vizType}(${opts})`;
                                         }
-                                    );
-                                    console.log(`[StrudelApp] Modified code for pattern ${index + 1}:`, s.substring(0, 100));
-                                } else {
-                                    console.warn(`[StrudelApp] Failed to create visualization or ctx for pattern ${index + 1}`);
-                                }
+                                        return `.tag(${vizId}).${vizType}(${opts})`;
+                                    }
+                                );
+                                console.log(`[StrudelApp] Modified code for pattern ${index + 1}:`, s.substring(0, 100));
                             }
                             return s;
                         });
 
-                        // Play all $: patterns together.
-                        // Each entry in `normalized` is an expression that returns a Pattern.
-                        const playCode = `stack(${normalized.join(',\n')}).play()`;
+                        // Evaluate to a single stacked Pattern; repl's evaluate() will setPattern() and start playback (autostart=true).
+                        const playCode = `stack(${normalized.join(',\n')})`;
 
-                        this.strudelEvaluate(playCode);
+                        await this.strudelEvaluate(playCode, true);
                         console.log('[StrudelApp] Patterns evaluated + playing via evaluate()');
                     } catch (error) {
                         console.error(`[StrudelApp] Error evaluating patterns via evaluate():`, error);
@@ -870,36 +937,30 @@ class StrudelApp {
                     dollarLines.forEach((item, index) => {
                         let code = normalizeVisuals(item.code);
                         
-                        // If this pattern has a visualization, create the canvas first
+                        // If this pattern has a visualization, create canvas (id strudel-viz-N) and inject ctx via getDrawContext
                         let viz = null;
                         if (item.hasVisualization) {
                             viz = this.createPatternVisualization(index, item.lineNumber, code);
-                            if (viz && viz.ctx) {
-                                // Inject ctx and unique id into visualization calls
-                                // Each pattern needs a unique id so they don't stop each other's animation (draw uses stopAnimationFrame(id))
-                                // __pianoroll filters haps by hasTag(id), so we must tag the pattern with the same id before the viz call
-                                const ctxRef = `window.__strudelVizCtx${index}`;
-                                const vizId = index + 1; // 1, 2, 3...
-                                code = code.replace(
-                                    /\.(pianoroll|punchcard|spiral|scope|spectrum|pitchwheel)\s*\(([^)]*)\)/g,
-                                    (match, vizType, args) => {
-                                        let opts = '';
-                                        if (!args || args.trim() === '') {
-                                            opts = `{ ctx: ${ctxRef}, id: ${vizId} }`;
+                            const vizId = index + 1;
+                            const canvasId = `'strudel-viz-${index}'`;
+                            code = code.replace(
+                                /\.(pianoroll|punchcard|spiral|scope|spectrum|pitchwheel)\s*\(([^)]*)\)/g,
+                                (match, vizType, args) => {
+                                    let opts = '';
+                                    if (!args || args.trim() === '') {
+                                        opts = `{ ctx: getDrawContext(${canvasId}), id: ${vizId} }`;
+                                    } else {
+                                        const trimmed = args.trim();
+                                        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+                                            const inner = trimmed.slice(1, -1).trim();
+                                            opts = `{ ${inner ? inner + ', ' : ''}ctx: getDrawContext(${canvasId}), id: ${vizId} }`;
                                         } else {
-                                            const trimmed = args.trim();
-                                            if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-                                                const inner = trimmed.slice(1, -1).trim();
-                                                opts = `{ ${inner ? inner + ', ' : ''}ctx: ${ctxRef}, id: ${vizId} }`;
-                                            } else {
-                                                opts = `Object.assign(${trimmed}, { ctx: ${ctxRef}, id: ${vizId} })`;
-                                            }
+                                            opts = `Object.assign(${trimmed}, { ctx: getDrawContext(${canvasId}), id: ${vizId} })`;
                                         }
-                                        return `.tag(${vizId}).${vizType}(${opts})`;
                                     }
-                                );
-                                window[`__strudelVizCtx${index}`] = viz.ctx;
-                            }
+                                    return `.tag(${vizId}).${vizType}(${opts})`;
+                                }
+                            );
                         }
                         
                         try {
@@ -1017,14 +1078,23 @@ class StrudelApp {
     }
 
     /**
-     * Clear all pattern visualizations
+     * Clear all pattern visualizations and stop their draw animation frames
      */
-    clearPatternVisualizations() {
-        const textarea = document.getElementById('strudel-editor');
+    async clearPatternVisualizations() {
+        const editorEl = this.getEditorElement();
+        // Stop @strudel/draw animation frames for each viz (ids are 1, 2, ...)
+        try {
+            const { cleanupDraw } = await import('@strudel/draw');
+            this._patternVisualizations.forEach((viz, index) => {
+                cleanupDraw(false, index + 1);
+            });
+        } catch (e) {
+            // Draw package may not be available (e.g. fallback mode)
+        }
         this._patternVisualizations.forEach((viz, index) => {
             // Remove event handlers
-            if (textarea && viz.container && viz.container._updateHandler) {
-                textarea.removeEventListener('scroll', viz.container._updateHandler);
+            if (editorEl && viz.container && viz.container._updateHandler) {
+                editorEl.removeEventListener('scroll', viz.container._updateHandler);
                 window.removeEventListener('resize', viz.container._updateHandler);
             }
             // Remove container
@@ -1042,10 +1112,8 @@ class StrudelApp {
      * Returns the visualization object with ctx for injection into pattern code
      */
     createPatternVisualization(patternIndex, lineNumber, code, pattern = null) {
-        const mirror = document.getElementById('strudel-mirror');
-        const codeElement = mirror ? mirror.querySelector('code') : null;
-        const textarea = document.getElementById('strudel-editor');
-        if (!mirror || !codeElement || !textarea) return null;
+        const textarea = this.getEditorElement();
+        if (!textarea) return null;
 
         // Remove existing visualization for this pattern if any
         const existing = this._patternVisualizations.get(patternIndex);
@@ -1112,47 +1180,65 @@ class StrudelApp {
         container.setAttribute('data-line-number', lineNumber);
         container.setAttribute('data-end-line-number', endLineNumber);
 
-        // Create canvas
+        // Create canvas with id so getDrawContext(id) finds it (same API as #test-canvas)
+        const canvasId = `strudel-viz-${patternIndex}`;
         const canvas = document.createElement('canvas');
+        canvas.id = canvasId;
         canvas.setAttribute('aria-hidden', 'true');
         container.appendChild(canvas);
 
-        // Get canvas context
+        // Get canvas context for placeholder draw
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-        // Insert the visualization into the pre tag
-        mirror.appendChild(container);
+        // Insert the visualization into the editor wrap
+        const editorWrap = textarea.closest('.strudel-editor-wrap');
+        if (!editorWrap) return null;
+        editorWrap.appendChild(container);
 
         // Size canvas immediately so first draw has correct dimensions (avoid race with animation start)
-        const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 21;
-        const padding = parseFloat(getComputedStyle(textarea).paddingTop) || 10;
-        const top = (endLineNumber + 1) * lineHeight + padding;
+        const measureEl = textarea.contentDOM || textarea;
+        const lineHeight = parseFloat(getComputedStyle(measureEl).lineHeight) || 21;
+        const padding = parseFloat(getComputedStyle(measureEl).paddingTop) || 10;
+        const baseTop = (endLineNumber + 1) * lineHeight + padding;
+        const scrollTop = textarea.scrollTop || 0;
+        const top = baseTop - scrollTop;
         container.style.top = `${top}px`;
-        container.style.height = '180px';
+        container.style.height = '100px';
         container.style.width = '100%';
+        // Use buffer size = display size; no transform so @strudel/draw (__pianoroll) draws in 0..width, 0..height correctly
         const dpr = window.devicePixelRatio || 1;
-        const width = mirror.getBoundingClientRect().width || 400;
+        const width = editorWrap.getBoundingClientRect().width || 400;
         canvas.width = Math.floor(width * dpr);
-        canvas.height = Math.floor(180 * dpr);
+        canvas.height = Math.floor(100 * dpr);
         canvas.style.width = width + 'px';
-        canvas.style.height = '180px';
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        canvas.style.height = '100px';
+        // Placeholder draw so canvas is not blank until @strudel/draw runs (will be overwritten by pianoroll)
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#666';
+        ctx.font = '12px monospace';
+        ctx.fillText('Pattern ' + (patternIndex + 1) + ' – waiting for draw…', 10, 24);
 
         // Calculate position based on the END of the pattern (last line)
         const updatePosition = () => {
-            const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 21;
-            const padding = parseFloat(getComputedStyle(textarea).paddingTop) || 10;
+            const measureEl = textarea.contentDOM || textarea;
+            const lineHeight = parseFloat(getComputedStyle(measureEl).lineHeight) || 21;
+            const padding = parseFloat(getComputedStyle(measureEl).paddingTop) || 10;
             
             // Calculate top position based on the END line of the pattern
             // endLineNumber is 0-based, so we add 1 to get the line after it
             // Position it right below the last line of the pattern
-            const top = (endLineNumber + 1) * lineHeight + padding;
+            const baseTop = (endLineNumber + 1) * lineHeight + padding;
+            
+            // Account for textarea scroll - when textarea scrolls down, visualizations move up
+            const scrollTop = textarea.scrollTop || 0;
+            const top = baseTop - scrollTop;
             
             container.style.top = `${top}px`;
             
-            console.log(`[StrudelApp] Visualization ${patternIndex + 1} position: startLine=${lineNumber}, endLine=${endLineNumber}, lineHeight=${lineHeight}, padding=${padding}, top=${top}px`);
+            console.log(`[StrudelApp] Visualization ${patternIndex + 1} position: startLine=${lineNumber}, endLine=${endLineNumber}, lineHeight=${lineHeight}, padding=${padding}, baseTop=${baseTop}px, scrollTop=${scrollTop}px, top=${top}px`);
             
-            // Resize canvas
+            // Resize canvas (no transform - draw package uses 0..canvas.width, 0..canvas.height)
             const dpr = window.devicePixelRatio || 1;
             const rect = container.getBoundingClientRect();
             if (rect.width > 0 && rect.height > 0) {
@@ -1160,7 +1246,6 @@ class StrudelApp {
                 canvas.height = Math.floor(rect.height * dpr);
                 canvas.style.width = rect.width + 'px';
                 canvas.style.height = rect.height + 'px';
-                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             }
         };
 
@@ -1202,54 +1287,84 @@ class StrudelApp {
      * Stop all Strudel audio playback
      * Uses hush() to stop all patterns simultaneously
      */
-    stopStrudelContent() {
+    async stopStrudelContent() {
         try {
-            // Stop all patterns simultaneously
-            // First, try to stop the stacked pattern if it exists and has a stop method
-            if (this.currentStackedPattern) {
-                try {
-                    if (typeof this.currentStackedPattern.stop === 'function') {
-                        this.currentStackedPattern.stop();
-                        console.log('[StrudelApp] Stacked pattern stopped');
-                    }
-                } catch (e) {
-                    // Ignore errors, fall through to hush()
-                }
-            }
-            
-            // Also try to stop individual patterns if they have stop methods
-            if (this.currentPatterns.length > 0) {
-                // Stop all patterns in the same synchronous execution
-                for (let i = 0; i < this.currentPatterns.length; i++) {
-                    try {
-                        const pattern = this.currentPatterns[i];
-                        if (pattern && typeof pattern.stop === 'function') {
-                            pattern.stop();
-                        }
-                    } catch (e) {
-                        // Ignore individual errors
-                    }
-                }
-            }
-            
-            // Use hush() to stop all audio playback (this should stop everything at once)
-            if (typeof hush === 'function') {
-                hush();
-                console.log('[StrudelApp] Audio stopped via hush()');
+            this.stopHighlightLoop();
+            // Stop the scheduler (stops audio and pattern evaluation)
+            if (typeof this.strudelStop === 'function') {
+                this.strudelStop();
+                console.log('[StrudelApp] Audio stopped via scheduler stop()');
             } else {
-                console.warn('[StrudelApp] hush function not available. Strudel may not be initialized.');
+                console.warn('[StrudelApp] strudelStop not available. Strudel may not be initialized.');
                 alert('Stop function not available. Strudel may not be initialized.');
             }
-            
+
             // Clear tracked patterns
             this.currentStackedPattern = null;
             this.currentPatterns = [];
-            
-            // Clear visualizations
-            this.clearPatternVisualizations();
+
+            // Clear visualizations (also stops their draw animation frames)
+            await this.clearPatternVisualizations();
         } catch (error) {
             console.error('[StrudelApp] Error stopping audio:', error);
             alert('Error stopping audio: ' + error.message);
+        }
+    }
+
+    /**
+     * Start the requestAnimationFrame loop that highlights active pattern tags in CodeMirror.
+     * Uses @strudel/codemirror highlightMiniLocations (same as strudel.repl).
+     */
+    startHighlightLoop() {
+        this.stopHighlightLoop();
+        let highlightMiniLocationsFn = null;
+        const loop = () => {
+            if (!this.strudelScheduler || !this.strudelScheduler.started || !this.cmView) {
+                this._highlightRAF = requestAnimationFrame(loop);
+                return;
+            }
+            const time = this.strudelScheduler.now();
+            const pattern = this.strudelScheduler.pattern;
+            if (!pattern || typeof pattern.queryArc !== 'function') {
+                this._highlightRAF = requestAnimationFrame(loop);
+                return;
+            }
+            const haps = pattern.queryArc(time - 0.1, time + 0.1) || [];
+            const activeHaps = haps.filter((h) => h && typeof h.isActive === 'function' && h.isActive(time));
+            // Map hap.context.locations from playCode coordinates to editor coordinates so highlights appear on the right lines
+            const map = this._playCodeToEditorMap;
+            const transformedHaps = map ? activeHaps.map((hap) => {
+                const locs = hap.context?.locations || [];
+                const newLocs = locs.map(({ start, end }) => map.get(`${start}:${end}`)).filter(Boolean);
+                if (newLocs.length === 0) return null;
+                return { ...hap, context: { ...hap.context, locations: newLocs } };
+            }).filter(Boolean) : activeHaps;
+            if (highlightMiniLocationsFn) {
+                highlightMiniLocationsFn(this.cmView, time, transformedHaps);
+            } else {
+                import('@strudel/codemirror').then(({ highlightMiniLocations }) => {
+                    highlightMiniLocationsFn = highlightMiniLocations;
+                    highlightMiniLocations(this.cmView, time, transformedHaps);
+                });
+            }
+            this._highlightRAF = requestAnimationFrame(loop);
+        };
+        this._highlightRAF = requestAnimationFrame(loop);
+    }
+
+    /**
+     * Stop the highlight loop and clear active-tag decorations.
+     */
+    stopHighlightLoop() {
+        if (this._highlightRAF != null) {
+            cancelAnimationFrame(this._highlightRAF);
+            this._highlightRAF = null;
+        }
+        if (this.cmView) {
+            import('@strudel/codemirror').then(({ updateMiniLocations, highlightMiniLocations }) => {
+                updateMiniLocations(this.cmView, []);
+                highlightMiniLocations(this.cmView, 0, []);
+            });
         }
     }
 
@@ -1338,7 +1453,6 @@ class StrudelApp {
             this.openDocuments.push(doc);
             this.activeDocumentId = doc.id;
             this.setEditorContent(doc.content);
-            this.updateMirror();
             this.renderOpenDocs();
             this.persistOpenFiles();
             console.log('[StrudelApp] File opened:', filePath);
@@ -1349,7 +1463,12 @@ class StrudelApp {
     }
 }
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
+// Initialize when DOM is ready (or immediately if script loaded late, e.g. fallback)
+function initStrudelApp() {
     new StrudelApp();
-});
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initStrudelApp);
+} else {
+    initStrudelApp();
+}

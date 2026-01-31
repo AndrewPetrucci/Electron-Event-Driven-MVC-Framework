@@ -12,11 +12,19 @@ $: note("c e g c5 e5 g5 c4 e4 g4")
 
   ._pianoroll({ fold: false })
 
+
+
+
+
 // You can also have multiple patterns with different visualizations
  $: note("c2 a2 eb2 f2")
    .euclid(5,8)
    .s("sine")
    ._pianoroll({ fold: false })
+
+
+
+
 
 // More complex example with transformations
 // $: note("c a f e")

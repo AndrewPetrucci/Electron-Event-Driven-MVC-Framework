@@ -60,13 +60,13 @@
     background: #1e1e1e;
 }
 
-/* Visualizations inserted into the pre tag - positioned absolutely relative to pre */
-.strudel-mirror .strudel-pattern-visualization {
+/* Visualizations inserted into the editor wrap - positioned absolutely */
+.strudel-editor-wrap .strudel-pattern-visualization {
     position: absolute;
     left: 0;
     right: 0;
     width: 100%;
-    height: 120px;
+    height: 100px;
     padding: 4px 0;
     background: #1a1a1a;
     border-top: 1px solid #333;
@@ -74,16 +74,16 @@
     pointer-events: none;
     overflow: hidden;
     box-sizing: border-box;
-    z-index: 1;
+    z-index: 0;
 }
 
-.strudel-mirror .strudel-pattern-visualization canvas {
+.strudel-editor-wrap .strudel-pattern-visualization canvas {
     display: block;
     width: 100%;
     height: 100%;
 }
 
-/* --- Textarea + highlight overlay (syntax via HTML + CSS) --- */
+/* --- Textarea editor --- */
 
 .strudel-editor-wrap {
     position: relative;
@@ -93,8 +93,29 @@
     background: #1e1e1e;
 }
 
-.strudel-mirror,
-.strudel-editor {
+.strudel-cm-root {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.strudel-cm-root .cm-editor {
+    height: 100%;
+    background: transparent;
+}
+
+.strudel-cm-root .cm-scroller {
+    font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Monaco, "Courier New", monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Textarea fallback when CodeMirror cannot load (e.g. in Electron renderer) */
+.strudel-editor.strudel-editor-fallback {
     position: absolute;
     top: 0;
     left: 0;
@@ -111,40 +132,9 @@
     box-sizing: border-box;
     border: none;
     outline: none;
-}
-
-.strudel-mirror {
-    z-index: 0;
-    pointer-events: none;
-    position: relative !important; /* Needed for absolute positioning of visualizations */
-}
-
-.strudel-mirror code {
-    font-family: inherit;
-    font-size: inherit;
-    line-height: inherit;
-    display: block;
-}
-
-.strudel-editor {
-    z-index: 1;
     background: transparent;
-    color: transparent;
+    color: #d4d4d4;
     caret-color: #d4d4d4;
     resize: none;
+    z-index: 1;
 }
-
-/* Base and token colors (all syntax styling in CSS) */
-
-.strudel-mirror,
-.strudel-mirror code {
-    background: #1e1e1e;
-    color: #d4d4d4;
-}
-
-.strudel-mirror code .token.comment { color: #8b949e !important; }
-.strudel-mirror code .token.string { color: #98c379 !important; }
-.strudel-mirror code .token.number { color: #569cd6 !important; }
-.strudel-mirror code .token.keyword { color: #d4d4d4 !important; }
-.strudel-mirror code .token.repl-prefix { color: #d4d4d4 !important; }
-.strudel-mirror code .token.operator { color: #d4d4d4 !important; }

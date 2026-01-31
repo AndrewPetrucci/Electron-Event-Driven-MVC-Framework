@@ -2,6 +2,10 @@ samples('github:tidalcycles/dirt-samples')
 samples('github:switchangel/pad')
 
 // $: s("breaks165").slice(8, "0 1 <2 2*2> 3 [4 0] 5 6 7".every(3, rev)).slow(0.75)
-$: s("breaks125").fit().slice([0,.25,.5,.75], "0 1 1 <2 3>").gain(.1)
+$: s("breaks125").fit().slice([0,.25,.5,.75], "0 1 1 <2 3>").gain(.1).scope()
 
-$: s("swpad:0").scrub("{0.1!2 .25@3 0.7!2 <0.8:1.5>}%8").slow(8).gain(.1)
+
+
+
+
+$: s("swpad:0").scrub("{0.1!2 .25@3 0.7!2 <0.8:1.5>}%8").slow(8).gain(.1).scope()
