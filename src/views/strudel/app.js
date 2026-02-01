@@ -172,6 +172,8 @@ class StrudelApp {
         this.openDocuments = [];
         /** @type {string|null} */
         this.activeDocumentId = null;
+        /** @type {Map<string, import('@codemirror/state').EditorState>} Per-tab CodeMirror state (incl. undo history). */
+        this._docEditorStates = new Map();
         this._untitledCounter = 0;
         this.initStrudel();
         this.initSaveLoadButtons();
@@ -658,16 +660,26 @@ class StrudelApp {
     }
 
     /**
-     * Switch to a document by id (save current editor to current doc, load doc into editor)
+     * Switch to a document by id (save current editor to current doc, load doc into editor).
+     * File change (undo/redo) history is scoped per tab: we save/restore CodeMirror state per document.
      */
     switchDocument(docId) {
         if (docId === this.activeDocumentId) return;
         this.stopStrudelContent();
         this.syncEditorToActiveDocument();
+        if (this.activeDocumentId && this.cmView) {
+            this._docEditorStates.set(this.activeDocumentId, this.cmView.state);
+        }
         const doc = this.openDocuments.find((d) => d.id === docId);
         if (!doc) return;
         this.activeDocumentId = docId;
-        this.setEditorContent(doc.content);
+        const stored = this._docEditorStates.get(docId);
+        if (this.cmView && stored) {
+            this.cmView.setState(stored);
+        } else {
+            this.setEditorContent(doc.content);
+        }
+        this.syncEditorToActiveDocument();
         this.renderOpenDocs();
         this.persistOpenFiles();
     }
@@ -678,6 +690,7 @@ class StrudelApp {
     closeDocument(docId) {
         const index = this.openDocuments.findIndex((d) => d.id === docId);
         if (index === -1) return;
+        this._docEditorStates.delete(docId);
         const wasActive = this.activeDocumentId === docId;
         this.openDocuments.splice(index, 1);
         if (this.openDocuments.length === 0) {
