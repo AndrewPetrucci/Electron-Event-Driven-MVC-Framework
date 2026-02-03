@@ -1,0 +1,14 @@
+{
+  "tags": [
+    { "id": "sounds", "label": "Sounds" },
+    { "id": "patterns", "label": "Patterns" },
+    { "id": "fx", "label": "FX" },
+    { "id": "utility", "label": "Utility" },
+    { "id": "drum", "label": "Drum" }
+  ],
+  "examples": [
+    { "id": "dumb1", "label": "Single Drum", "code": "sound(\"bd\")", "tags": ["sounds", "drum"] },
+    { "id": "dumb2", "label": "Drumb Sequence", "code": "sound(\"bd hh sd oh\")", "tags": ["sounds", "patterns", "drum"] },
+    { "id": "dumbBank1", "label": "Drumb Sequence w/ Bank", "code": "sound(\"bd hh sd oh\").bank(\"RolandTR909\")", "tags": ["sounds", "patterns", "drum", "utility"] }
+  ]
+}

@@ -58,6 +58,15 @@ Wheel Spin → Python Executor → Command Queue File → Controller → Game Ac
   - Check that target application window is responding
   - Increase sleep delays in .ahk scripts if timing issues occur
 
+### mod-file-writer (JSON output for Skyrim mod)
+- **Location**: `controllers/mod-file-writer/executor-controller.js`
+- **What it does**: Writes (overwrites) a JSON file shaped like `ConsoleCommands.json`:
+  - `stringList.commands`: array of command strings
+  - `timestamp`: ISO-8601 timestamp
+- **Config**:
+  - `config.fileWriterPath` (preferred): absolute path OR filename. If it’s not absolute, the file is written under `%USERPROFILE%\Documents\Overlay\tmp\`.
+  - `config.outputPath` (fallback): same behavior as above
+
 ### SKSE Plugin (Stub)
 - **Location**: `controllers/skse/`
 - **Status**: Stub/placeholder

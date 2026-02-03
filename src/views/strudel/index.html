@@ -74,12 +74,20 @@
                     <div id="strudel-cm-root" class="strudel-cm-root"></div>
                     <textarea class="strudel-editor strudel-editor-fallback" id="strudel-editor" spellcheck="false" placeholder="Strudel code…" style="display: none;"></textarea>
                 </div>
-                <div id="strudel-docs" class="strudel-docs" aria-label="Function documentation">
-                    <div class="strudel-docs-summary">
-                        <div class="strudel-docs-placeholder">Click a function name in the editor to see its documentation.</div>
-                        <div class="strudel-docs-content" id="strudel-docs-content" hidden></div>
+                <div class="vertical-split">
+                    <div class="horrizontal-split">
+                        <button type="button" class="horrizontal-split-btn button-depressed" id="showPaletteBtn" title="Show palette">Palette</button>
+                        <button type="button" class="horrizontal-split-btn" id="showDocsBtn" title="Show documentation">Docs</button>
                     </div>
-                    <iframe id="strudel-docs-iframe" class="strudel-docs-iframe" title="Strudel documentation" hidden></iframe>
+                    <div class="docs-container">
+                        <div id="strudel-pallet" class="strudel-pallet" aria-label="Strudel palette">
+                            <div class="pallet-button-container"></div>
+                            <div class="strudel-pallet-content"></div>
+                        </div>
+                        <div id="strudel-docs" class="strudel-docs" aria-label="Function documentation" hidden>
+                            <iframe id="strudel-docs-iframe" class="strudel-docs-iframe" title="Strudel documentation" src="https://strudel.cc/workshop/getting-started"></iframe>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -109,6 +109,21 @@ test('parseCodeForPlay: comment lines inside pattern are skipped (not break)', (
   assert(dollarLines[0].code.includes('s("hh")'));
 });
 
+test('parseCodeForPlay: stack with .scope() and blank line stays one block', () => {
+  const code = [
+    'stack(',
+    '  s("breaks125").fit().slice([0,.25,.5,.75], "0 1 1 <2 3>").gain(.2).scope(),',
+    '',
+    '  s("swpad:0").scrub("{0.1!2 .25@3 0.7!2 <0.8:1.5>}%8").slow(8).gain(.1).scope()',
+    ')',
+  ].join('\n');
+  const { dollarLines } = parseCodeForPlay(code);
+  assertEqual(dollarLines.length, 1);
+  assert(dollarLines[0].code.includes('s("breaks125")'));
+  assert(dollarLines[0].code.includes('s("swpad:0")'));
+  assert(dollarLines[0].hasVisualization, 'should detect scope() as visualization');
+});
+
 // --- getDollarBlocksWithSegments ---
 test('getDollarBlocksWithSegments: one block, segments cover full pattern', () => {
   const code = '  stack(\n  s("bd")\n)';
@@ -135,6 +150,21 @@ test('getDollarBlocksWithSegments: comment-only lines skipped, block continues',
   const blocks = getDollarBlocksWithSegments(code);
   assertEqual(blocks.length, 1);
   assert(blocks[0].code.includes('s("hh")'));
+});
+
+test('getDollarBlocksWithSegments: blank line inside stack with scope() included', () => {
+  const code = [
+    'stack(',
+    '  s("breaks125").gain(.2).scope(),',
+    '',
+    '  s("swpad:0").gain(.1).scope()',
+    ')',
+  ].join('\n');
+  const blocks = getDollarBlocksWithSegments(code);
+  assertEqual(blocks.length, 1);
+  assert(blocks[0].code.includes('s("breaks125")'));
+  assert(blocks[0].code.includes('s("swpad:0")'));
+  assert(blocks[0].code.includes('\n\n'), 'block should include the blank line');
 });
 
 // --- mapPatternRangeToDoc ---

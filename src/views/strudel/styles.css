@@ -105,6 +105,46 @@
     color: #ffcc00;
 }
 
+.horrizontal-split {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.horrizontal-split-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    color: #b8c5ff;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #555;
+    border-radius: 4px;
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+}
+
+.horrizontal-split-btn:hover {
+    background: rgba(0, 0, 0, 0.5);
+    border-color: #8fa3ff;
+}
+
+.horrizontal-split-btn.button-depressed {
+    background: rgba(102, 126, 234, 0.6);
+    border-color: #8fa3ff;
+    color: #fff;
+}
+
+/* Stacks child divs vertically (on top of each other) */
+.vertical-split {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
 #strudel-container {
     width: 100%;
     height: 100%;
@@ -112,12 +152,81 @@
     display: flex;
     flex-direction: row;
     overflow: hidden;
+    background: #1e1e1e;
+}
+
+.docs-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .strudel-docs {
     flex-shrink: 0;
-    width: 500px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 100%;
+    background: #252526;
+    border-left: 1px solid #333;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #d4d4d4;
+}
+
+/* Ensure [hidden] wins over display: flex so the whole panel (and children) is hidden */
+#strudel-docs[hidden],
+.strudel-pallet[hidden] {
+    display: none !important;
+}
+
+.pallet-button-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 6px 8px;
+}
+
+.pallet-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    color: #b8c5ff;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #555;
+    border-radius: 4px;
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+}
+
+.pallet-btn:hover {
+    background: rgba(0, 0, 0, 0.5);
+    border-color: #8fa3ff;
+}
+
+.pallet-btn:focus {
+    outline: none;
+}
+
+/* Border only highlighted when hovered or depressed, not when focused-but-deselected */
+.pallet-btn:focus:not(:hover):not(.button-depressed) {
+    border-color: #555;
+}
+
+.pallet-btn.button-depressed {
+    background: rgba(102, 126, 234, 0.6);
+    border-color: #8fa3ff;
+    color: #fff;
+}
+
+.strudel-pallet {
+    flex: 1;
     min-width: 200px;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -128,10 +237,108 @@
     color: #d4d4d4;
 }
 
-.strudel-docs-summary {
-    flex-shrink: 0;
-    padding: 8px 12px;
+.strudel-pallet-content {
+    flex: 1;
+    min-height: 0;
     overflow: auto;
+    background: #252526;
+    color: #d4d4d4;
+    padding: 8px 12px;
+}
+
+.pallet-examples-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.pallet-example-item {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #333;
+}
+
+.pallet-example-item:last-child {
+    border-bottom: none;
+}
+
+.pallet-example-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.pallet-example-label {
+    display: block;
+    font-weight: 600;
+    color: #dcdcaa;
+    margin-bottom: 4px;
+}
+
+.pallet-example-cm-container {
+    margin: 0;
+    font-size: 11px;
+    background: #1e1e1e;
+    border-radius: 4px;
+    overflow: auto;
+    max-height: 120px;
+}
+
+.pallet-example-cm-container .cm-editor {
+    font-size: 11px;
+}
+
+.pallet-example-cm-container .cm-scroller {
+    font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Monaco, monospace;
+    min-height: 2.5em;
+}
+
+.pallet-example-cm-container .cm-content {
+    padding: 6px 8px;
+}
+
+.pallet-example-code {
+    margin: 0;
+    padding: 6px 8px;
+    font-size: 11px;
+    font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Monaco, monospace;
+    background: #1e1e1e;
+    border-radius: 4px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.pallet-example-actions {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.pallet-example-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+    font-family: inherit;
+    color: #b8c5ff;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #555;
+    border-radius: 4px;
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+}
+
+.pallet-example-btn:hover {
+    background: rgba(0, 0, 0, 0.5);
+    border-color: #8fa3ff;
+}
+
+.pallet-example-btn:focus {
+    outline: none;
+    border-color: #8fa3ff;
 }
 
 .strudel-docs-iframe {
@@ -140,39 +347,6 @@
     width: 100%;
     border: none;
     background: #1e1e1e;
-}
-
-.strudel-docs-placeholder {
-    color: #858585;
-    font-style: italic;
-}
-
-.strudel-docs-content {
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.strudel-docs-content .strudel-docs-name {
-    font-weight: 600;
-    color: #dcdcaa;
-    margin-bottom: 4px;
-}
-
-.strudel-docs-content .strudel-docs-link {
-    margin-top: 6px;
-    padding: 0;
-    border: none;
-    background: none;
-    color: #569cd6;
-    font-size: inherit;
-    font-family: inherit;
-    cursor: pointer;
-    text-decoration: none;
-    display: inline-block;
-}
-
-.strudel-docs-content .strudel-docs-link:hover {
-    text-decoration: underline;
 }
 
 /* Toolbar icon buttons (play, stop, update, save, open) - in window bar left of tabs */
@@ -335,7 +509,6 @@
     flex: 1;
     min-height: 120px;
     overflow: hidden;
-    background: #1e1e1e;
 }
 
 .strudel-cm-root {

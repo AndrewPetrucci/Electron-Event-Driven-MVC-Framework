@@ -126,6 +126,7 @@ function createWindow(windowConfig = { html: 'src/windows/boilderplate/index.htm
     const x = screen.workAreaSize.width - windowOptions.width;
     const y = screen.workAreaSize.height - windowOptions.height;
     
+
     const window = new BrowserWindow({
         ...windowOptions,
         x: x,
@@ -135,7 +136,8 @@ function createWindow(windowConfig = { html: 'src/windows/boilderplate/index.htm
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
             contextIsolation: true,
-            enableRemoteModule: false
+            enableRemoteModule: false,
+            backgroundThrottling: false
         }
     });
 

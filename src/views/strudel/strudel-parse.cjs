@@ -50,7 +50,9 @@ function parseCodeForPlay(code) {
           const peekNext = i < lines.length ? lines[i].trim() : '';
           const continuesWithDot = /^\s*\./.test(peekNext);
           const continuesWithComma = /^\s*,/.test(peekNext);
-          if (balanced && !continuesWithDot && !continuesWithComma) break;
+          // Don't break when we're inside stack( ... ) with more args (line ends with comma), e.g. after .scope(),
+          const lineEndsWithComma = /,\s*$/.test(withNext.trimEnd());
+          if (balanced && !continuesWithDot && !continuesWithComma && !lineEndsWithComma) break;
         }
       }
       if (patternCode) {
@@ -108,6 +110,22 @@ function getDollarBlocksWithSegments(code) {
       const next = lines[i].trim();
       const nextLine = lines[i];
       if (!next) {
+        // Include blank lines inside stack( ... ) so segment mapping matches document and evaluated code
+        const openCount = (patternCode.match(/[(\[{]/g) || []).length;
+        const closeCount = (patternCode.match(/[)\]\}]/g) || []).length;
+        const lineEndsWithComma = /,\s*$/.test(patternCode.trimEnd());
+        if (patternCode && (lineEndsWithComma || openCount > closeCount)) {
+          const chunk = (patternCode ? '\n' : '') + nextLine;
+          const partStartInDoc = lines.slice(0, i).join('\n').length;
+          const patternFrom = patternCode.length;
+          patternCode += chunk;
+          segments.push({
+            patternFrom,
+            patternTo: patternCode.length,
+            docFrom: partStartInDoc,
+            docTo: partStartInDoc + chunk.length,
+          });
+        }
         i++;
         continue;
       }

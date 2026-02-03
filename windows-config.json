@@ -11,15 +11,7 @@
                 "yOffset": 0
             },
             "windowConfig": {},
-            "options": {
-                "buttons": [
-                    {
-                        "id": "actionBtn",
-                        "controller": "PythonKeys",
-                        "config": {}
-                    }
-                ]
-            }
+            "options": {}
         },
         {
             "id": "wheel",
@@ -200,6 +192,76 @@
             },
             "windowConfig": {},
             "options": {
+            }
+        },
+        {
+            "id": "wheel",
+            "name": "Twitch Wheel!!!",
+            "html": "src/views/wheel/index.html",
+            "enabled": true,
+            "position": {
+                "offset": 0,
+                "xOffset": 0,
+                "yOffset": 0
+            },
+            "windowConfig": {
+                "transparent": true
+            },
+            "options": {
+                "wheel": [
+                    {
+                        "name": "Mudcrabs",
+                        "command": "spawmudcrabs",
+                        "description": "Insert current date and time",
+                        "enabled": true,
+                        "application": "Skyrim",
+                        "color": "rgba(255, 107, 107, 0.2)",
+                        "controller": "mod-file-writer",
+                        "config": {
+                            "fileWriterPath": "C:\\Users\\andre\\AppData\\Local\\ModOrganizer\\Skyrim Special Edition (2)\\overwrite\\SKSE\\Plugins\\StorageUtilData\\ConsoleCommands.json",
+                            "commands": ["spawmudcrabs"]
+                        }
+                    },
+                    {
+                        "name": "Cheeeese",
+                        "command": "raincheeses",
+                        "description": "Insert current date and time",
+                        "enabled": true,
+                        "application": "Skyrim",
+                        "controller": "mod-file-writer",
+                        "color": "rgba(78, 205, 196, 0.2)",
+                        "config": {
+                            "fileWriterPath": "C:\\Users\\andre\\AppData\\Local\\ModOrganizer\\Skyrim Special Edition (2)\\overwrite\\SKSE\\Plugins\\StorageUtilData\\ConsoleCommands.json",
+                            "commands": ["raincheeses"]
+                        }
+                    },
+                    {
+                        "name": "Chickens",
+                        "command": "rainchickens",
+                        "description": "Insert current date and time",
+                        "enabled": true,
+                        "color": "rgba(69, 183, 209, 0.2)",
+                        "application": "Skyrim",
+                        "controller": "mod-file-writer",
+                        "config": {
+                            "fileWriterPath": "C:\\Users\\andre\\AppData\\Local\\ModOrganizer\\Skyrim Special Edition (2)\\overwrite\\SKSE\\Plugins\\StorageUtilData\\ConsoleCommands.json",
+                            "commands": ["rainchickens"]
+                        }
+                    },
+                    {
+                        "name": "Dragon",
+                        "command": "spawndragon",
+                        "description": "Insert current date and time",
+                        "enabled": true,
+                        "color": "rgba(255, 160, 122, 0.2)",
+                        "application": "Skyrim",
+                        "controller": "mod-file-writer",
+                        "config": {
+                            "fileWriterPath": "C:\\Users\\andre\\AppData\\Local\\ModOrganizer\\Skyrim Special Edition (2)\\overwrite\\SKSE\\Plugins\\StorageUtilData\\ConsoleCommands.json",
+                            "commands": ["spawndragon"]
+                        }
+                    }
+                ]
             }
         }
     ],

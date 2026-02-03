@@ -177,9 +177,15 @@ class StrudelApp {
         /** @type {Map<string, import('@codemirror/state').EditorState>} Per-tab CodeMirror state (incl. undo history). */
         this._docEditorStates = new Map();
         this._untitledCounter = 0;
+        /** @type {{ tags: Array<{id:string, label?:string}>, examples: Array<{id?:string, label?:string, code?:string, tags?: string[]}> }} Loaded from pallet-tags.json */
+        this.palletData = { tags: [], examples: [] };
+        /** @type {import('@codemirror/view').EditorView[]} Read-only CodeMirror views for palette examples; destroyed on re-render. */
+        this._palletExampleViews = [];
         this.initStrudel();
         this.initSaveLoadButtons();
         this.initSettingsPanel();
+        this.initDocsPaletteButtons();
+        this.initPalletButtons();
     }
 
     /**
@@ -432,30 +438,12 @@ class StrudelApp {
     }
 
     /**
-     * Show documentation for a Strudel function in the docs panel.
+     * Show documentation for a Strudel function in the docs panel (loads URL in iframe).
      * @param {string} name - function name (e.g. s, fit, slice, gain)
      */
     showDoc(name) {
-        const placeholder = document.querySelector('.strudel-docs-placeholder');
-        const contentEl = document.getElementById('strudel-docs-content');
-        if (!placeholder || !contentEl) return;
         const doc = STRUDEL_DOCS[name];
-        if (!doc) {
-            placeholder.hidden = false;
-            contentEl.hidden = true;
-            return;
-        }
-        placeholder.hidden = true;
-        contentEl.hidden = false;
-        contentEl.innerHTML = '';
-        const nameEl = document.createElement('div');
-        nameEl.className = 'strudel-docs-name';
-        nameEl.textContent = name + '()';
-        contentEl.appendChild(nameEl);
-        const summaryEl = document.createElement('div');
-        summaryEl.textContent = doc.summary;
-        contentEl.appendChild(summaryEl);
-        if (doc.link) {
+        if (doc?.link) {
             this.showDocInIframe(doc.link);
         }
     }
@@ -603,6 +591,217 @@ class StrudelApp {
         this.renderOpenDocs();
 
         window.addEventListener('beforeunload', () => this.persistOpenFiles());
+    }
+
+    /**
+     * Initialize Docs / Palette toggle buttons in horrizontal-split: show one panel, hide the other; toggle button-depressed.
+     */
+    initDocsPaletteButtons() {
+        const showDocsBtn = document.getElementById('showDocsBtn');
+        const showPaletteBtn = document.getElementById('showPaletteBtn');
+        const strudelDocs = document.getElementById('strudel-docs');
+        const strudelPallet = document.getElementById('strudel-pallet');
+
+        if (!showDocsBtn || !showPaletteBtn || !strudelDocs || !strudelPallet) return;
+
+        function showDocs() {
+            strudelDocs.removeAttribute('hidden');
+            strudelPallet.setAttribute('hidden', '');
+            showDocsBtn.classList.add('button-depressed');
+            showPaletteBtn.classList.remove('button-depressed');
+        }
+
+        function showPalette() {
+            strudelPallet.removeAttribute('hidden');
+            strudelDocs.setAttribute('hidden', '');
+            showPaletteBtn.classList.add('button-depressed');
+            showDocsBtn.classList.remove('button-depressed');
+        }
+
+        showDocsBtn.addEventListener('click', showDocs);
+        showPaletteBtn.addEventListener('click', showPalette);
+    }
+
+    /**
+     * Load palette tags from pallet-tags.json and create pallet-btn elements. Click toggles button-depressed and refreshes examples.
+     */
+    async initPalletButtons() {
+        const container = document.querySelector('.pallet-button-container');
+        const contentEl = document.querySelector('.strudel-pallet-content');
+        if (!container) return;
+
+        try {
+            const url = new URL('pallet-tags.json', window.location.href).href;
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                if (data?.tags && Array.isArray(data.tags)) {
+                    this.palletData.tags = data.tags;
+                }
+                if (data?.examples && Array.isArray(data.examples)) {
+                    this.palletData.examples = data.examples;
+                }
+            }
+        } catch (e) {
+            console.warn('[StrudelApp] Could not load pallet-tags.json:', e?.message || e);
+        }
+
+        container.innerHTML = '';
+        for (const tag of this.palletData.tags) {
+            const id = typeof tag === 'string' ? tag : tag?.id ?? '';
+            const label = typeof tag === 'object' && tag?.label != null ? tag.label : id;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'pallet-btn';
+            btn.setAttribute('data-pallet-category', id);
+            btn.textContent = label;
+            btn.addEventListener('click', () => {
+                btn.classList.toggle('button-depressed');
+                this.renderPalletExamples();
+            });
+            container.appendChild(btn);
+        }
+
+        if (contentEl) this.renderPalletExamples();
+    }
+
+    /**
+     * Show in strudel-pallet-content all examples whose tags include every currently selected (depressed) tag.
+     * If no tag is selected, show all examples. Each example gets a read-only CodeMirror with syntax highlighting.
+     */
+    async renderPalletExamples() {
+        const contentEl = document.querySelector('.strudel-pallet-content');
+        if (!contentEl) return;
+
+        (this._palletExampleViews || []).forEach((v) => {
+            try {
+                v.destroy();
+            } catch (_) {}
+        });
+        this._palletExampleViews = [];
+        contentEl.innerHTML = '';
+
+        const selectedTags = Array.from(document.querySelectorAll('.pallet-btn.button-depressed'))
+            .map((btn) => btn.getAttribute('data-pallet-category'))
+            .filter(Boolean);
+
+        const examples = this.palletData.examples.filter((ex) => {
+            const exTags = Array.isArray(ex.tags) ? ex.tags : [];
+            if (selectedTags.length === 0) return true;
+            return selectedTags.every((t) => exTags.includes(t));
+        });
+
+        if (examples.length === 0) {
+            contentEl.textContent = selectedTags.length === 0 ? 'Select one or more tags to filter examples.' : 'No examples match the selected tags.';
+            return;
+        }
+        const list = document.createElement('ul');
+        list.className = 'pallet-examples-list';
+        const mounts = [];
+        for (const ex of examples) {
+            const li = document.createElement('li');
+            li.className = 'pallet-example-item';
+            const main = document.createElement('div');
+            main.className = 'pallet-example-main';
+            const labelEl = document.createElement('span');
+            labelEl.className = 'pallet-example-label';
+            labelEl.textContent = ex.label ?? ex.id ?? 'Untitled';
+            main.appendChild(labelEl);
+            if (ex.code) {
+                const codeMount = document.createElement('div');
+                codeMount.className = 'pallet-example-cm-container';
+                main.appendChild(codeMount);
+                mounts.push({ el: codeMount, code: ex.code });
+            }
+            li.appendChild(main);
+            const actions = document.createElement('div');
+            actions.className = 'pallet-example-actions';
+            const playBtn = document.createElement('button');
+            playBtn.type = 'button';
+            playBtn.className = 'pallet-example-btn pallet-example-play';
+            playBtn.title = 'Play';
+            playBtn.textContent = 'Play';
+            playBtn.addEventListener('click', () => this.playExampleCode(ex.code));
+            const copyBtn = document.createElement('button');
+            copyBtn.type = 'button';
+            copyBtn.className = 'pallet-example-btn pallet-example-copy';
+            copyBtn.title = 'Copy to clipboard';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', () => this.copyExampleToClipboard(ex.code));
+            actions.appendChild(playBtn);
+            actions.appendChild(copyBtn);
+            li.appendChild(actions);
+            list.appendChild(li);
+        }
+        contentEl.appendChild(list);
+        for (const { el, code } of mounts) {
+            await this.createPalletExampleCodeMirror(el, code);
+        }
+    }
+
+    /**
+     * Create a read-only CodeMirror view for palette example code (syntax highlighting only). Does not touch the main editor.
+     * On failure falls back to a plain <pre>.
+     * @param {HTMLElement} container - Element to mount the editor into (or fallback pre)
+     * @param {string} code - Example code text
+     */
+    async createPalletExampleCodeMirror(container, code) {
+        try {
+            const [stateMod, viewMod, langJs, langMod] = await Promise.all([
+                import('@codemirror/state'),
+                import('@codemirror/view'),
+                import('@codemirror/lang-javascript'),
+                import('@codemirror/language'),
+            ]);
+            const { EditorState } = stateMod;
+            const { EditorView } = viewMod;
+            const { javascript } = langJs;
+            const { defaultHighlightStyle, syntaxHighlighting } = langMod;
+            const state = EditorState.create({
+                doc: code,
+                extensions: [
+                    javascript(),
+                    syntaxHighlighting(defaultHighlightStyle),
+                    EditorView.editable.of(false),
+                    EditorView.lineWrapping,
+                ],
+            });
+            const view = new EditorView({
+                state,
+                parent: container,
+            });
+            (this._palletExampleViews = this._palletExampleViews || []).push(view);
+        } catch (e) {
+            console.warn('[StrudelApp] Palette example CodeMirror failed, using plain pre:', e?.message || e);
+            container.innerHTML = '';
+            const pre = document.createElement('pre');
+            pre.className = 'pallet-example-code';
+            pre.textContent = code;
+            container.appendChild(pre);
+        }
+    }
+
+    /**
+     * Play a single example code snippet programmatically (does not use or change the editor).
+     * Plays one cycle then stops.
+     * @param {string} code - Example code to play
+     */
+    async playExampleCode(code) {
+        if (!code || !code.trim()) return;
+        await this.playStrudelContent(code, 1);
+    }
+
+    /**
+     * Copy example code to the clipboard.
+     * @param {string} code - Example code to copy
+     */
+    async copyExampleToClipboard(code) {
+        if (!code) return;
+        try {
+            await navigator.clipboard.writeText(code);
+        } catch (e) {
+            console.warn('[StrudelApp] Could not copy to clipboard:', e?.message || e);
+        }
     }
 
     /**
@@ -1452,20 +1651,103 @@ class StrudelApp {
     }
 
     /**
+     * Find the position of the closing ')' that matches the '(' at openPos.
+     * Skips over strings and nested parens.
+     */
+    _findMatchingCloseParen(str, openPos) {
+        let depth = 1;
+        let i = openPos + 1;
+        while (i < str.length && depth > 0) {
+            const ch = str[i];
+            if (ch === '"' || ch === "'" || ch === '`') {
+                const quote = ch;
+                i++;
+                while (i < str.length && str[i] !== quote) {
+                    if (str[i] === '\\') i++;
+                    i++;
+                }
+                i++;
+                continue;
+            }
+            if (ch === '(' || ch === '[' || ch === '{') depth++;
+            else if (ch === ')' || ch === ']' || ch === '}') {
+                depth--;
+                if (ch === ')' && depth === 0) return i;
+            }
+            i++;
+        }
+        return -1;
+    }
+
+    /**
      * Map a range [from, to] in substituted (actual) playCode back to original playCode.
-     * Used when substituteGMWithBuiltinSynths has changed the evaluated code.
+     * Handles (1) substituteGMWithBuiltinSynths and (2) viz injection (.scope() -> .tag(id).scope({ ctx, id })).
      */
     _mapActualPlayCodeRangeToOriginal(actualPlayCode, originalPlayCode, actualFrom, actualTo) {
         if (actualPlayCode === originalPlayCode) return [actualFrom, actualTo];
+
+        // Build viz replacement spans: .tag(N).(scope|...)(...) in actual vs .(scope|...)(...) in original
+        const vizMethods = 'pianoroll|punchcard|spiral|scope|spectrum|pitchwheel';
+        const actualSpans = [];
+        const actualVizStartRe = new RegExp(`\\.tag\\(\\d+\\)\\.(${vizMethods})\\s*\\(`, 'g');
+        let m;
+        while ((m = actualVizStartRe.exec(actualPlayCode)) !== null) {
+            const open = m.index + m[0].length - 1; // position of '('
+            const close = this._findMatchingCloseParen(actualPlayCode, open);
+            if (close !== -1) actualSpans.push({ from: m.index, to: close + 1 });
+        }
+        const originalSpans = [];
+        const originalVizStartRe = new RegExp(`\\.(${vizMethods})\\s*\\(`, 'g');
+        while ((m = originalVizStartRe.exec(originalPlayCode)) !== null) {
+            const open = m.index + m[0].length - 1;
+            const close = this._findMatchingCloseParen(originalPlayCode, open);
+            if (close !== -1) originalSpans.push({ from: m.index, to: close + 1 });
+        }
+
+        const segments = [];
+        for (let i = 0; i < actualSpans.length && i < originalSpans.length; i++) {
+            segments.push({
+                actualFrom: actualSpans[i].from,
+                actualTo: actualSpans[i].to,
+                originalFrom: originalSpans[i].from,
+                originalTo: originalSpans[i].to,
+            });
+        }
+        segments.sort((a, b) => a.actualFrom - b.actualFrom);
+
+        const actualToOriginal = (p) => {
+            let offset = 0;
+            for (const seg of segments) {
+                if (p < seg.actualFrom) return p - offset;
+                if (p < seg.actualTo) {
+                    const frac = (p - seg.actualFrom) / (seg.actualTo - seg.actualFrom);
+                    return seg.originalFrom + Math.floor(frac * (seg.originalTo - seg.originalFrom));
+                }
+                offset += (seg.actualTo - seg.actualFrom) - (seg.originalTo - seg.originalFrom);
+            }
+            return p - offset;
+        };
+
+        if (actualFrom >= actualPlayCode.length) actualFrom = actualPlayCode.length - 1;
+        if (actualTo > actualPlayCode.length) actualTo = actualPlayCode.length;
+        if (actualFrom >= actualTo) return [actualToOriginal(actualFrom), actualToOriginal(actualFrom)];
+
+        const origFrom = actualToOriginal(actualFrom);
+        const origToEnd = actualToOriginal(actualTo - 1);
+        const origTo = origToEnd + 1;
+
+        if (segments.length > 0) return [Math.max(0, origFrom), Math.min(originalPlayCode.length, origTo)];
+
+        // GM substitution (actual shorter than original)
         const subs = [
             [/\.s\(["']gm_epiano1[^"']*["']\)/g, '.s("triangle")'],
             [/\.s\(["']gm_acoustic_bass["']\)/g, '.s("sawtooth")'],
         ];
         const matches = [];
         for (const [regex, repl] of subs) {
-            let m;
-            while ((m = regex.exec(originalPlayCode)) !== null) {
-                matches.push({ start: m.index, end: m.index + m[0].length, repl });
+            let match;
+            while ((match = regex.exec(originalPlayCode)) !== null) {
+                matches.push({ start: match.index, end: match.index + match[0].length, repl });
             }
         }
         matches.sort((a, b) => a.start - b.start);
@@ -1493,21 +1775,29 @@ class StrudelApp {
             aPos++;
             oPos++;
         }
-        if (actualFrom >= map.length) return [actualFrom, actualTo];
-        let origFrom = map[actualFrom].from;
-        let origTo = actualTo > 0 && actualTo - 1 < map.length ? map[actualTo - 1].to : origFrom;
+        if (actualFrom >= map.length) return [origFrom, origTo];
+        let gmOrigFrom = map[actualFrom].from;
+        let gmOrigTo = actualTo > 0 && actualTo - 1 < map.length ? map[actualTo - 1].to : gmOrigFrom;
         for (let i = actualFrom; i < actualTo && i < map.length; i++) {
-            origFrom = Math.min(origFrom, map[i].from);
-            origTo = Math.max(origTo, map[i].to);
+            gmOrigFrom = Math.min(gmOrigFrom, map[i].from);
+            gmOrigTo = Math.max(gmOrigTo, map[i].to);
         }
-        return [origFrom, origTo];
+        return [gmOrigFrom, gmOrigTo];
+    }
+
+    /** Count visualization method calls (scope, pianoroll, etc.) in code for multi-vis support. */
+    countVizCallsInCode(code) {
+        const matches = code.match(/\.(pianoroll|punchcard|spiral|scope|spectrum|pitchwheel)\s*\(/g);
+        return matches ? matches.length : 0;
     }
 
     /**
      * Build stack(...) play code from pattern lines and create pattern visualizations.
      * Returns the playCode string to pass to strudelEvaluate.
+     * Supports multiple viz calls per pattern block (e.g. two .scope() in one stack).
      */
     buildStackPlayCodeFromDollarLines(dollarLines) {
+        let globalVizIndex = 0;
         const normalized = dollarLines.map((item, index) => {
             let s = item.code
                 .replace(/\._pianoroll\b/g, '.pianoroll')
@@ -1517,12 +1807,19 @@ class StrudelApp {
                 .replace(/\._spectrum\b/g, '.spectrum')
                 .replace(/\._pitchwheel\b/g, '.pitchwheel');
             if (item.hasVisualization) {
-                this.createPatternVisualization(index, item.lineNumber, s);
-                const vizId = index + 1;
-                const canvasId = `'strudel-viz-${index}'`;
+                const count = this.countVizCallsInCode(s);
+                for (let i = 0; i < count; i++) {
+                    this.createPatternVisualization(globalVizIndex + i, item.lineNumber, i);
+                }
+                const startGlobal = globalVizIndex;
+                globalVizIndex += count;
+                let occurrence = 0;
                 s = s.replace(
                     /\.(pianoroll|punchcard|spiral|scope|spectrum|pitchwheel)\s*\(([^)]*)\)/g,
                     (match, vizType, args) => {
+                        const canvasId = `'strudel-viz-${startGlobal + occurrence}'`;
+                        const vizId = startGlobal + occurrence + 1;
+                        occurrence++;
                         let opts = '';
                         if (!args || args.trim() === '') {
                             opts = `{ ctx: getDrawContext(${canvasId}), id: ${vizId} }`;
@@ -1545,13 +1842,20 @@ class StrudelApp {
         return `stack(${normalized.join(',\n')})`;
     }
 
+    /** Default cycle duration in ms when setcps(0.5) (one cycle every 2 seconds). */
+    static get CYCLE_MS() {
+        return 2000;
+    }
+
     /**
-     * Play/evaluate the Strudel code from the textarea.
+     * Play/evaluate Strudel code. If codeToPlay is provided, uses it; otherwise uses the editor content.
      * Pattern lines are executed as a single stack; setup lines run in the same scope.
+     * @param {string|null|undefined} [codeToPlay] - Optional code string to play (e.g. palette example). When omitted, uses editor content.
+     * @param {number|undefined} [cycles] - If a positive number, stop playback after this many cycles (default cycle = 2s). If undefined, play until stopped.
      */
-    async playStrudelContent() {
+    async playStrudelContent(codeToPlay, cycles) {
         try {
-            let code = this.getEditorContent();
+            const code = codeToPlay != null ? codeToPlay : this.getEditorContent();
             if (code === null) {
                 console.warn('[StrudelApp] No editor found');
                 return;
@@ -1629,6 +1933,9 @@ class StrudelApp {
                         }
                         console.log('[StrudelApp] Patterns evaluated + playing via evaluate()');
                         await this.startVizDrawerIfNeeded();
+                        if (typeof cycles === 'number' && cycles > 0 && typeof this.strudelStop === 'function') {
+                            setTimeout(() => this.strudelStop(), cycles * StrudelApp.CYCLE_MS);
+                        }
                     } catch (error) {
                         console.error(`[StrudelApp] Error evaluating patterns via evaluate():`, error);
                     }
@@ -1645,18 +1952,25 @@ class StrudelApp {
                         .replace(/\._pitchwheel\b/g, '.pitchwheel');
 
                 const patternObjects = [];
+                let globalVizIndex = 0;
                 dollarLines.forEach((item, index) => {
                     let code = normalizeVisuals(item.code);
                     
-                    // If this pattern has a visualization, create canvas (id strudel-viz-N) and inject ctx via getDrawContext
-                    let viz = null;
+                    // If this pattern has visualization(s), create one canvas per viz and inject ctx (multi-vis support)
                     if (item.hasVisualization) {
-                        viz = this.createPatternVisualization(index, item.lineNumber, code);
-                        const vizId = index + 1;
-                        const canvasId = `'strudel-viz-${index}'`;
+                        const count = this.countVizCallsInCode(code);
+                        for (let i = 0; i < count; i++) {
+                            this.createPatternVisualization(globalVizIndex + i, item.lineNumber, i);
+                        }
+                        const startGlobal = globalVizIndex;
+                        globalVizIndex += count;
+                        let occurrence = 0;
                         code = code.replace(
                             /\.(pianoroll|punchcard|spiral|scope|spectrum|pitchwheel)\s*\(([^)]*)\)/g,
                             (match, vizType, args) => {
+                                const canvasId = `'strudel-viz-${startGlobal + occurrence}'`;
+                                const vizId = startGlobal + occurrence + 1;
+                                occurrence++;
                                 let opts = '';
                                 if (!args || args.trim() === '') {
                                     opts = `{ ctx: getDrawContext(${canvasId}), id: ${vizId} }`;
@@ -1683,11 +1997,6 @@ class StrudelApp {
                             if (pattern && pattern._Pattern) {
                                 patternObjects.push(pattern);
                                 console.log(`[StrudelApp] Pattern ${index + 1} prepared: ${code.substring(0, 80)}...`);
-                                
-                                // Update visualization with the actual pattern
-                                if (viz) {
-                                    viz.pattern = pattern;
-                                }
                             } else {
                                 console.warn(`[StrudelApp] Pattern ${index + 1} did not return a Pattern object. Code: ${code}, Result:`, pattern);
                             }
@@ -1732,6 +2041,9 @@ class StrudelApp {
                                 stackedPattern.play();
                                 console.log(`[StrudelApp] All patterns started playing via stack()`);
                                 await this.startVizDrawerIfNeeded();
+                                if (typeof cycles === 'number' && cycles > 0 && typeof this.strudelStop === 'function') {
+                                    setTimeout(() => this.strudelStop(), cycles * StrudelApp.CYCLE_MS);
+                                }
                             } else {
                                 // Fallback: play each pattern individually if stack() is not available
                                 console.warn('[StrudelApp] stack() function not available, playing patterns individually');
@@ -1747,6 +2059,9 @@ class StrudelApp {
                                         console.error(`[StrudelApp] Error playing pattern ${index + 1}:`, error);
                                     }
                                 });
+                                if (typeof cycles === 'number' && cycles > 0 && typeof this.strudelStop === 'function') {
+                                    setTimeout(() => this.strudelStop(), cycles * StrudelApp.CYCLE_MS);
+                                }
                             }
                         } catch (error) {
                             console.error(`[StrudelApp] Error stacking/playing patterns:`, error);
@@ -1891,57 +2206,49 @@ class StrudelApp {
         this._patternVisualizations.clear();
     }
 
+    /** Height in px of each visualization container (for stacking multiple viz in one block). */
+    static get VIZ_CONTAINER_HEIGHT() {
+        return 100;
+    }
+
     /**
-     * Create a visualization canvas for a pattern, inserted into the pre tag after its source line
-     * Returns the visualization object with ctx for injection into pattern code
+     * Create a visualization canvas for one viz slot (supports multiple viz per pattern block).
+     * @param {number} globalVizIndex - Unique index across all viz (0, 1, 2, …); used for canvas id and storage key.
+     * @param {number} lineNumber - Start line of the pattern block (0-based).
+     * @param {number} [occurrenceInBlock=0] - Which viz in this block (0 = first), used to stack containers vertically.
+     * @returns The visualization object (container, canvas, ctx, updatePosition, etc.) or null.
      */
-    createPatternVisualization(patternIndex, lineNumber, code, pattern = null) {
+    createPatternVisualization(globalVizIndex, lineNumber, occurrenceInBlock = 0) {
         const textarea = this.getEditorElement();
         if (!textarea) return null;
 
-        // Remove existing visualization for this pattern if any
-        const existing = this._patternVisualizations.get(patternIndex);
-        if (existing && existing.container && existing.container.parentElement) {
-            existing.container.remove();
-        }
-
         // Calculate how many lines the pattern spans
-        // The pattern code might be on a single line (after concatenation) or we need to count from the original
         const codeText = textarea.value;
         const allLines = codeText.split('\n');
         
-        // Find the end line of the pattern by looking for where the pattern block ends
-        // Start from lineNumber and count continuation lines (including blank lines within the pattern)
         let endLineNumber = lineNumber;
         let i = lineNumber;
-        let foundNonBlank = false; // Track if we've found any non-blank continuation
+        let foundNonBlank = false;
         
         while (i < allLines.length) {
             const line = allLines[i];
             const trimmed = line.trim();
             
-            // Skip blank lines but continue (they're part of the pattern block)
             if (trimmed === '') {
                 i++;
                 continue;
             }
-            
-            // Stop at comments (unless we haven't found any continuation yet)
             if (trimmed.startsWith('//')) {
                 if (foundNonBlank) break;
                 i++;
                 continue;
             }
-            
-            // Check if this is a continuation line (starts with . or is part of the pattern)
             if (i === lineNumber || /^\s*\./.test(line) || (foundNonBlank && !trimmed.match(/^\s*[a-zA-Z_$]/))) {
                 endLineNumber = i;
                 foundNonBlank = true;
                 i++;
             } else {
-                // If we've found continuation lines before, this might be the end
                 if (foundNonBlank) break;
-                // Otherwise, this might be the first continuation
                 if (i > lineNumber) {
                     endLineNumber = i;
                     foundNonBlank = true;
@@ -1952,72 +2259,54 @@ class StrudelApp {
             }
         }
         
-        // Create container
         const container = document.createElement('div');
         container.className = 'strudel-pattern-visualization';
-        container.setAttribute('data-pattern-index', patternIndex);
+        container.setAttribute('data-viz-index', globalVizIndex);
         container.setAttribute('data-line-number', lineNumber);
         container.setAttribute('data-end-line-number', endLineNumber);
 
-        // Create canvas with id so getDrawContext(id) finds it (same API as #test-canvas)
-        const canvasId = `strudel-viz-${patternIndex}`;
+        const canvasId = `strudel-viz-${globalVizIndex}`;
         const canvas = document.createElement('canvas');
         canvas.id = canvasId;
         canvas.setAttribute('aria-hidden', 'true');
         container.appendChild(canvas);
 
-        // Get canvas context for placeholder draw
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-        // Insert the visualization into the editor wrap
         const editorWrap = textarea.closest('.strudel-editor-wrap');
         if (!editorWrap) return null;
         editorWrap.appendChild(container);
 
-        // Size canvas immediately so first draw has correct dimensions (avoid race with animation start)
         const measureEl = textarea.contentDOM || textarea;
         const lineHeight = parseFloat(getComputedStyle(measureEl).lineHeight) || 21;
         const padding = parseFloat(getComputedStyle(measureEl).paddingTop) || 10;
         const baseTop = (endLineNumber + 1) * lineHeight + padding;
         const scrollTop = textarea.scrollTop || 0;
-        const top = baseTop - scrollTop;
+        const vizHeight = StrudelApp.VIZ_CONTAINER_HEIGHT;
+        const top = baseTop - scrollTop + occurrenceInBlock * vizHeight;
         container.style.top = `${top}px`;
-        container.style.height = '100px';
+        container.style.height = vizHeight + 'px';
         container.style.width = '100%';
-        // Use buffer size = display size; no transform so @strudel/draw (__pianoroll) draws in 0..width, 0..height correctly
         const dpr = window.devicePixelRatio || 1;
         const width = editorWrap.getBoundingClientRect().width || 400;
         canvas.width = Math.floor(width * dpr);
-        canvas.height = Math.floor(100 * dpr);
+        canvas.height = Math.floor(vizHeight * dpr);
         canvas.style.width = width + 'px';
-        canvas.style.height = '100px';
-        // Placeholder draw so canvas is not blank until @strudel/draw runs (will be overwritten by pianoroll)
+        canvas.style.height = vizHeight + 'px';
         ctx.fillStyle = '#1a1a1a';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#666';
         ctx.font = '12px monospace';
-        ctx.fillText('Pattern ' + (patternIndex + 1) + ' – waiting for draw…', 10, 24);
+        ctx.fillText('Viz ' + (globalVizIndex + 1) + ' – waiting for draw…', 10, 24);
 
-        // Calculate position based on the END of the pattern (last line)
         const updatePosition = () => {
             const measureEl = textarea.contentDOM || textarea;
             const lineHeight = parseFloat(getComputedStyle(measureEl).lineHeight) || 21;
             const padding = parseFloat(getComputedStyle(measureEl).paddingTop) || 10;
-            
-            // Calculate top position based on the END line of the pattern
-            // endLineNumber is 0-based, so we add 1 to get the line after it
-            // Position it right below the last line of the pattern
             const baseTop = (endLineNumber + 1) * lineHeight + padding;
-            
-            // Account for textarea scroll - when textarea scrolls down, visualizations move up
             const scrollTop = textarea.scrollTop || 0;
-            const top = baseTop - scrollTop;
-            
+            const top = baseTop - scrollTop + occurrenceInBlock * StrudelApp.VIZ_CONTAINER_HEIGHT;
             container.style.top = `${top}px`;
-            
-            console.log(`[StrudelApp] Visualization ${patternIndex + 1} position: startLine=${lineNumber}, endLine=${endLineNumber}, lineHeight=${lineHeight}, padding=${padding}, baseTop=${baseTop}px, scrollTop=${scrollTop}px, top=${top}px`);
-            
-            // Resize canvas (no transform - draw package uses 0..canvas.width, 0..canvas.height)
             const dpr = window.devicePixelRatio || 1;
             const rect = container.getBoundingClientRect();
             if (rect.width > 0 && rect.height > 0) {
@@ -2028,37 +2317,24 @@ class StrudelApp {
             }
         };
 
-        // Update position on scroll/resize
-        const updateHandler = () => {
-            updatePosition();
-        };
-        
-        // Initial position
-        setTimeout(() => {
-            updatePosition();
-        }, 0);
-        
+        const updateHandler = () => updatePosition();
+        setTimeout(() => updatePosition(), 0);
         textarea.addEventListener('scroll', updateHandler);
         window.addEventListener('resize', updateHandler);
-        
-        // Store handler for cleanup
         container._updateHandler = updateHandler;
 
-        // Store visualization info
         const viz = {
             container,
             canvas,
             ctx,
             lineNumber,
-            code,
-            pattern,
-            patternIndex,
+            code: null,
+            pattern: null,
+            patternIndex: globalVizIndex,
             updatePosition,
         };
         
-        this._patternVisualizations.set(patternIndex, viz);
-        
-        console.log(`[StrudelApp] Created visualization ${patternIndex + 1} at line ${lineNumber + 1} (inserted into pre tag, total: ${this._patternVisualizations.size})`);
+        this._patternVisualizations.set(globalVizIndex, viz);
         return viz;
     }
 
