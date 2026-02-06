@@ -24,9 +24,7 @@
                 "yOffset": 0
             },
             "windowConfig": {
-                "transparent": true,
-                "width": 600,
-                "height": 600
+                "transparent": true
             },
             "options": {
                 "wheel": [
@@ -200,16 +198,14 @@
             "id": "wheel",
             "name": "Twitch Wheel!!!",
             "html": "src/views/wheel/index.html",
-            "enabled": false,
+            "enabled": true,
             "position": {
                 "offset": 0,
                 "xOffset": 0,
                 "yOffset": 0
             },
             "windowConfig": {
-                "transparent": true,
-                "width": 600,
-                "height": 600
+                "transparent": true
             },
             "options": {
                 "wheel": [
