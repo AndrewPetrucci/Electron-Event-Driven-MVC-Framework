@@ -35,10 +35,34 @@ const STRUDEL_DOCS = {
     clip: { summary: 'Multiply duration and cut samples that exceed it.', link: 'https://strudel.cc/learn/samples/#clip' },
     loopAt: { summary: 'Fit the sample to n cycles by changing speed.', link: 'https://strudel.cc/learn/samples/#loopat' },
     scrub: { summary: 'Scrub audio like a tape loop; position in file (0–1) and optional playback speed.', link: 'https://strudel.cc/learn/samples/#scrub' },
+    bank: { summary: 'Drum/sample bank: prepend a name to sample abbrevs, e.g. s("bd sd").bank("RolandTR808").', link: 'https://strudel.cc/learn/samples/#sound-banks' },
+    loop: { summary: 'Loop the sample (unsynced to cycle). Use loopBegin/loopEnd for region.', link: 'https://strudel.cc/learn/samples/#loop' },
+    loopBegin: { summary: 'Start of loop region (0–1). Use with loop(1).', link: 'https://strudel.cc/learn/samples/#loopbegin' },
+    loopEnd: { summary: 'End of loop region (0–1). Use with loop(1).', link: 'https://strudel.cc/learn/samples/#loopend' },
+    cut: { summary: 'Cut group: stop sample when another in same group plays (e.g. open/closed hi-hat).', link: 'https://strudel.cc/learn/samples/#cut' },
+    striate: { summary: 'Chop sample into n parts, trigger progressive portions each loop.', link: 'https://strudel.cc/learn/samples/#striate' },
+    splice: { summary: 'Like slice but changes speed of each slice to match step duration.', link: 'https://strudel.cc/learn/samples/#splice' },
+    samples: { summary: 'Load custom sample map (object or URL to strudel.json).', link: 'https://strudel.cc/learn/samples/#loading-custom-samples' },
+    soundAlias: { summary: 'Create alias for existing sound, e.g. soundAlias("RolandTR808_bd", "kick").', link: 'https://strudel.cc/learn/samples/#default-samples' },
+    setcps: { summary: 'Set tempo in cycles per second (e.g. setcps(0.75)). Default 0.5 = 2s per cycle.', link: 'https://strudel.cc/understand/cycles/' },
+    setcpm: { summary: 'Set tempo in cycles per minute. setcpm(x) = setcps(x/60). Use setcpm(bpm/bpc) for BPM.', link: 'https://strudel.cc/understand/cycles/' },
     /* Notes: https://strudel.cc/learn/notes/ */
     note: { summary: 'Pitch: note names (a3 c#4) or MIDI numbers (57 61 64).', link: 'https://strudel.cc/learn/notes/' },
     n: { summary: 'Note: .n(0) or .note("c4"). Change pitch of a sample.', link: 'https://strudel.cc/learn/mini-notation/' },
     freq: { summary: 'Pitch as frequency in Hz, e.g. freq("220 275 330 440").', link: 'https://strudel.cc/learn/notes/#freq' },
+    /* Tonal / chords: https://strudel.cc/learn/tonal/ */
+    chord: { summary: 'Chord symbols (e.g. C, Am, G7). Use with .voicing() and optionally .dict("ireal").', link: 'https://strudel.cc/understand/voicings/#what-is-a-chord' },
+    dict: { summary: 'Voicing dictionary for chord(), e.g. .dict("ireal"). Custom dicts via addVoicings().', link: 'https://strudel.cc/understand/voicings/#voicing-dictionaries' },
+    dictionary: { summary: 'Voicing dictionary for chord() (alias for dict), e.g. .dict("ireal").', link: 'https://strudel.cc/understand/voicings/#voicing-dictionaries' },
+    voicing: { summary: 'Turn chord symbols into voicings with optional anchor, mode, below, above, etc.', link: 'https://strudel.cc/learn/tonal/#voicing' },
+    scale: { summary: 'Scale: root and type (e.g. C:major). Turns numbers into scale notes or quantizes.', link: 'https://strudel.cc/learn/tonal/#scalename' },
+    transpose: { summary: 'Transpose all notes by semitones (number or interval notation).', link: 'https://strudel.cc/learn/tonal/#transposesemitones' },
+    scaleTranspose: { summary: 'Transpose notes within the scale by scale steps.', link: 'https://strudel.cc/learn/tonal/#scaletransposesteps' },
+    rootNotes: { summary: 'Chord symbols to root notes in given octave. Use with layer/struct/voicing.', link: 'https://strudel.cc/learn/tonal/#rootnotesoctave--2' },
+    anchor: { summary: 'Voicing: note to align voicings to (e.g. c5). Used with chord/voicing.', link: 'https://strudel.cc/understand/voicings/#anchor' },
+    mode: { summary: 'Voicing mode: below, above, duck, root. Used with chord/voicing.', link: 'https://strudel.cc/understand/voicings/#mode' },
+    set: { summary: 'Set pattern value from another (e.g. n("0 1 2").set(chords).voicing()).', link: 'https://strudel.cc/understand/voicings/#example' },
+    add: { summary: 'Add values to pattern (e.g. for transposing). Chainable.', link: 'https://strudel.cc/learn/conditional-modifiers/#struct' },
     /* Audio effects: https://strudel.cc/learn/effects/ */
     gain: { summary: 'Volume: multiply amplitude, e.g. .gain(.5).', link: 'https://strudel.cc/learn/effects/#gain' },
     lpf: { summary: 'Low-pass filter: .lpf(2000).lpfq(4).', link: 'https://strudel.cc/learn/effects/#lpf' },
@@ -49,8 +73,86 @@ const STRUDEL_DOCS = {
     pan: { summary: 'Stereo panning: .pan(sine) or .pan(.5).', link: 'https://strudel.cc/learn/effects/#pan' },
     jux: { summary: 'Juxtapose: apply a function to the pattern and combine with original, e.g. .jux(rev).', link: 'https://strudel.cc/learn/effects/#jux' },
     delay: { summary: 'Delay effect: .delay(.2).delaytime(.5).', link: 'https://strudel.cc/learn/effects/#delay' },
+    delaytime: { summary: 'Delay time in cycles or seconds.', link: 'https://strudel.cc/learn/effects/#delaytime' },
+    delayfeedback: { summary: 'Delay feedback amount (0–1). Caution: >= 1 can blow up.', link: 'https://strudel.cc/learn/effects/#delayfeedback' },
+    delayfb: { summary: 'Synonym for delayfeedback.', link: 'https://strudel.cc/learn/effects/#delayfeedback' },
     room: { summary: 'Reverb level and size. .room(.8).roomsize(4).', link: 'https://strudel.cc/learn/effects/#room' },
+    roomsize: { summary: 'Reverb room size (0–10). Changing recalculates reverb.', link: 'https://strudel.cc/learn/effects/#roomsize' },
+    roomfade: { summary: 'Reverb fade time in seconds.', link: 'https://strudel.cc/learn/effects/#roomfade' },
+    roomlp: { summary: 'Reverb lowpass frequency in Hz.', link: 'https://strudel.cc/learn/effects/#roomlp' },
+    roomdim: { summary: 'Reverb lowpass frequency at -60dB (Hz).', link: 'https://strudel.cc/learn/effects/#roomdim' },
+    iresponse: { summary: 'Impulse response sample for reverb.', link: 'https://strudel.cc/learn/effects/#iresponse' },
     reverb: { summary: 'Reverb effect (see room).', link: 'https://strudel.cc/learn/effects/#room' },
+    hpq: { summary: 'High-pass filter Q (resonance).', link: 'https://strudel.cc/learn/effects/#hpq' },
+    bpq: { summary: 'Band-pass filter Q (resonance).', link: 'https://strudel.cc/learn/effects/#bpq' },
+    ftype: { summary: 'Filter type: 12db (0), ladder (1), or 24db (2).', link: 'https://strudel.cc/learn/effects/#ftype' },
+    attack: { summary: 'Amplitude envelope attack time (seconds).', link: 'https://strudel.cc/learn/effects/#attack' },
+    att: { summary: 'Synonym for attack.', link: 'https://strudel.cc/learn/effects/#attack' },
+    decay: { summary: 'Amplitude envelope decay time (seconds).', link: 'https://strudel.cc/learn/effects/#decay' },
+    dec: { summary: 'Synonym for decay.', link: 'https://strudel.cc/learn/effects/#decay' },
+    sustain: { summary: 'Amplitude envelope sustain level (0–1).', link: 'https://strudel.cc/learn/effects/#sustain' },
+    sus: { summary: 'Synonym for sustain.', link: 'https://strudel.cc/learn/effects/#sustain' },
+    release: { summary: 'Amplitude envelope release time (seconds).', link: 'https://strudel.cc/learn/effects/#release' },
+    rel: { summary: 'Synonym for release.', link: 'https://strudel.cc/learn/effects/#release' },
+    adsr: { summary: 'ADSR envelope: attack, decay, sustain, release.', link: 'https://strudel.cc/learn/effects/#adsr' },
+    lpa: { summary: 'Lowpass filter envelope attack. Synonym: lpattack.', link: 'https://strudel.cc/learn/effects/#lpattack' },
+    lpattack: { summary: 'Lowpass filter envelope attack time.', link: 'https://strudel.cc/learn/effects/#lpattack' },
+    lpd: { summary: 'Lowpass filter envelope decay. Synonym: lpdecay.', link: 'https://strudel.cc/learn/effects/#lpdecay' },
+    lpdecay: { summary: 'Lowpass filter envelope decay time.', link: 'https://strudel.cc/learn/effects/#lpdecay' },
+    lps: { summary: 'Lowpass filter envelope sustain. Synonym: lpsustain.', link: 'https://strudel.cc/learn/effects/#lpsustain' },
+    lpsustain: { summary: 'Lowpass filter envelope sustain level.', link: 'https://strudel.cc/learn/effects/#lpsustain' },
+    lpr: { summary: 'Lowpass filter envelope release. Synonym: lprelease.', link: 'https://strudel.cc/learn/effects/#lprelease' },
+    lprelease: { summary: 'Lowpass filter envelope release time.', link: 'https://strudel.cc/learn/effects/#lprelease' },
+    lpenv: { summary: 'Lowpass filter envelope modulation depth.', link: 'https://strudel.cc/learn/effects/#lpenv' },
+    lpe: { summary: 'Synonym for lpenv.', link: 'https://strudel.cc/learn/effects/#lpenv' },
+    pattack: { summary: 'Pitch envelope attack time.', link: 'https://strudel.cc/learn/effects/#pattack' },
+    patt: { summary: 'Synonym for pattack.', link: 'https://strudel.cc/learn/effects/#pattack' },
+    pdecay: { summary: 'Pitch envelope decay time.', link: 'https://strudel.cc/learn/effects/#pdecay' },
+    pdec: { summary: 'Synonym for pdecay.', link: 'https://strudel.cc/learn/effects/#pdecay' },
+    prelease: { summary: 'Pitch envelope release time.', link: 'https://strudel.cc/learn/effects/#prelease' },
+    prel: { summary: 'Synonym for prelease.', link: 'https://strudel.cc/learn/effects/#prelease' },
+    penv: { summary: 'Pitch envelope amount (semitones). Negative flips envelope.', link: 'https://strudel.cc/learn/effects/#penv' },
+    pcurve: { summary: 'Pitch envelope curve: 0 = linear, 1 = exponential.', link: 'https://strudel.cc/learn/effects/#pcurve' },
+    panchor: { summary: 'Pitch envelope range anchor (0 or 1).', link: 'https://strudel.cc/learn/effects/#panchor' },
+    velocity: { summary: 'Velocity 0–1. Multiplied with gain.', link: 'https://strudel.cc/learn/effects/#velocity' },
+    compressor: { summary: 'Dynamics compressor. Params: threshold:ratio:knee:attack:release.', link: 'https://strudel.cc/learn/effects/#compressor' },
+    postgain: { summary: 'Gain applied after all effects.', link: 'https://strudel.cc/learn/effects/#postgain' },
+    post: { summary: 'Synonym for postgain.', link: 'https://strudel.cc/learn/effects/#postgain' },
+    xfade: { summary: 'Crossfade between two patterns (0–1).', link: 'https://strudel.cc/learn/effects/#xfade' },
+    juxBy: { summary: 'Jux with adjustable stereo width (0 = mono, 1 = full).', link: 'https://strudel.cc/learn/effects/#juxby' },
+    coarse: { summary: 'Sample-rate reduction (fake resampling). 1 = original, 2 = half, etc.', link: 'https://strudel.cc/learn/effects/#coarse' },
+    crush: { summary: 'Bit crusher. Depth 1 (drastic) to 16 (barely).', link: 'https://strudel.cc/learn/effects/#crush' },
+    distort: { summary: 'Waveshaping distortion. Optional postgain and type.', link: 'https://strudel.cc/learn/effects/#distort' },
+    dist: { summary: 'Synonym for distort.', link: 'https://strudel.cc/learn/effects/#distort' },
+    orbit: { summary: 'Global output/orbit for shared delay/reverb. Same orbit = shared effects.', link: 'https://strudel.cc/learn/effects/#orbit' },
+    o: { summary: 'Synonym for orbit.', link: 'https://strudel.cc/learn/effects/#orbit' },
+    phaser: { summary: 'Phaser effect. Speed in cycles.', link: 'https://strudel.cc/learn/effects/#phaser' },
+    ph: { summary: 'Synonym for phaser.', link: 'https://strudel.cc/learn/effects/#phaser' },
+    phaserdepth: { summary: 'Phaser depth (0–1).', link: 'https://strudel.cc/learn/effects/#phaserdepth' },
+    phasercenter: { summary: 'Phaser center frequency (Hz).', link: 'https://strudel.cc/learn/effects/#phasercenter' },
+    phasersweep: { summary: 'Phaser LFO sweep range (Hz).', link: 'https://strudel.cc/learn/effects/#phasersweep' },
+    duckorbit: { summary: 'Duck an orbit (sidechain-style). Target orbit number.', link: 'https://strudel.cc/learn/effects/#duckorbit' },
+    duck: { summary: 'Synonym for duckorbit.', link: 'https://strudel.cc/learn/effects/#duckorbit' },
+    duckattack: { summary: 'Duck: time for ducked signal to return to normal.', link: 'https://strudel.cc/learn/effects/#duckattack' },
+    duckdepth: { summary: 'Duck amount (0–1).', link: 'https://strudel.cc/learn/effects/#duckdepth' },
+    tremolosync: { summary: 'Amplitude modulation speed in cycles. Synonym: tremsync.', link: 'https://strudel.cc/learn/effects/#tremolosync' },
+    tremsync: { summary: 'Synonym for tremolosync.', link: 'https://strudel.cc/learn/effects/#tremolosync' },
+    tremolodepth: { summary: 'Tremolo depth.', link: 'https://strudel.cc/learn/effects/#tremolodepth' },
+    tremoloskew: { summary: 'Tremolo waveform shape (0–1).', link: 'https://strudel.cc/learn/effects/#tremoloskew' },
+    tremolophase: { summary: 'Tremolo phase offset (cycles).', link: 'https://strudel.cc/learn/effects/#tremolophase' },
+    tremoloshape: { summary: 'Tremolo shape: tri, square, sine, saw, ramp.', link: 'https://strudel.cc/learn/effects/#tremoloshape' },
+    /* Synths: https://strudel.cc/learn/synths/ */
+    sound: { summary: 'Synth waveform: sine, sawtooth, square, triangle, white, pink, brown, user.', link: 'https://strudel.cc/learn/synths/#basic-waveforms' },
+    partials: { summary: 'Additive synth: magnitude of harmonics (array). Use with sound("user") or filter.', link: 'https://strudel.cc/learn/synths/#partials' },
+    phases: { summary: 'Phase of each harmonic for additive synthesis.', link: 'https://strudel.cc/learn/synths/#phases' },
+    vib: { summary: 'Vibrato: frequency in Hz. Optional depth with ":".', link: 'https://strudel.cc/learn/synths/#vib' },
+    vibmod: { summary: 'Vibrato depth in semitones. Use with vib.', link: 'https://strudel.cc/learn/synths/#vibmod' },
+    fm: { summary: 'FM synthesis: modulation index (brightness).', link: 'https://strudel.cc/learn/synths/#fm' },
+    fmh: { summary: 'FM harmonicity ratio (timbre).', link: 'https://strudel.cc/learn/synths/#fmh' },
+    fmattack: { summary: 'FM envelope attack time.', link: 'https://strudel.cc/learn/synths/#fmattack' },
+    fmdecay: { summary: 'FM envelope decay time.', link: 'https://strudel.cc/learn/synths/#fmdecay' },
+    fmsustain: { summary: 'FM envelope sustain level.', link: 'https://strudel.cc/learn/synths/#fmsustain' },
+    fmenv: { summary: 'FM envelope ramp type: lin or exp.', link: 'https://strudel.cc/learn/synths/#fmenv' },
     /* Time modifiers: https://strudel.cc/learn/time-modifiers/ */
     slow: { summary: 'Slow down a pattern over the given number of cycles. Like "/" in mini notation.', link: 'https://strudel.cc/learn/time-modifiers/#slow' },
     fast: { summary: 'Speed up a pattern by the given factor. Used by "*" in mini notation.', link: 'https://strudel.cc/learn/time-modifiers/#fast' },
@@ -142,6 +244,40 @@ const STRUDEL_DOCS = {
     spectrum: { summary: 'Spectrum analyzer for the incoming audio. Use _spectrum() for inline.', link: 'https://strudel.cc/learn/visual-feedback/#spectrum' },
     markcss: { summary: 'Override CSS of highlighted events, e.g. .markcss(\'text-decoration:underline\').', link: 'https://strudel.cc/learn/visual-feedback/#markcss' },
     color: { summary: 'Color for mini notation highlighting and visuals, e.g. .color("cyan magenta").', link: 'https://strudel.cc/learn/visual-feedback/' },
+    /* Random modifiers: https://strudel.cc/learn/random-modifiers/ */
+    choose: { summary: 'Pick randomly from a list of values/patterns.', link: 'https://strudel.cc/learn/random-modifiers/#choose' },
+    wchoose: { summary: 'Weighted random choice from [value, weight] pairs.', link: 'https://strudel.cc/learn/random-modifiers/#wchoose' },
+    chooseCycles: { summary: 'Pick one element at random each cycle. Synonym: randcat.', link: 'https://strudel.cc/learn/random-modifiers/#choosecycles' },
+    randcat: { summary: 'Synonym for chooseCycles.', link: 'https://strudel.cc/learn/random-modifiers/#choosecycles' },
+    wchooseCycles: { summary: 'Weighted random pick per cycle. Synonym: wrandcat.', link: 'https://strudel.cc/learn/random-modifiers/#wchoosecycles' },
+    wrandcat: { summary: 'Synonym for wchooseCycles.', link: 'https://strudel.cc/learn/random-modifiers/#wchoosecycles' },
+    degradeBy: { summary: 'Randomly remove events (0–1 = 0–100% removal).', link: 'https://strudel.cc/learn/random-modifiers/#degradeby' },
+    degrade: { summary: 'Remove 50% of events at random. Like degradeBy(0.5).', link: 'https://strudel.cc/learn/random-modifiers/#degrade' },
+    undegradeBy: { summary: 'Inverse of degradeBy: 0 = 100% removal, 1 = 0%.', link: 'https://strudel.cc/learn/random-modifiers/#undegradeby' },
+    undegrade: { summary: 'Inverse of degrade (50%).', link: 'https://strudel.cc/learn/random-modifiers/#undegrade' },
+    sometimes: { summary: 'Apply function with 50% chance.', link: 'https://strudel.cc/learn/random-modifiers/#sometimes' },
+    sometimesBy: { summary: 'Apply function with given probability (0–1).', link: 'https://strudel.cc/learn/random-modifiers/#sometimesby' },
+    someCycles: { summary: 'Apply function 50% of cycles. Like someCyclesBy(0.5, fn).', link: 'https://strudel.cc/learn/random-modifiers/#somecycles' },
+    someCyclesBy: { summary: 'Apply function with probability on a per-cycle basis.', link: 'https://strudel.cc/learn/random-modifiers/#somecyclesby' },
+    often: { summary: 'Shorthand for sometimesBy(0.75, fn).', link: 'https://strudel.cc/learn/random-modifiers/#often' },
+    rarely: { summary: 'Shorthand for sometimesBy(0.25, fn).', link: 'https://strudel.cc/learn/random-modifiers/#rarely' },
+    almostNever: { summary: 'Shorthand for sometimesBy(0.1, fn).', link: 'https://strudel.cc/learn/random-modifiers/#almostnever' },
+    almostAlways: { summary: 'Shorthand for sometimesBy(0.9, fn).', link: 'https://strudel.cc/learn/random-modifiers/#almostalways' },
+    never: { summary: 'sometimesBy(0, fn) – never apply.', link: 'https://strudel.cc/learn/random-modifiers/#never' },
+    always: { summary: 'sometimesBy(1, fn) – always apply.', link: 'https://strudel.cc/learn/random-modifiers/#always' },
+    /* Signals: https://strudel.cc/learn/signals/ */
+    rand: { summary: 'Continuous random 0–1. Use rand.range(a,b) for range.', link: 'https://strudel.cc/learn/signals/#rand' },
+    irand: { summary: 'Continuous random integers 0 to n-1.', link: 'https://strudel.cc/learn/signals/#irand' },
+    perlin: { summary: 'Perlin noise signal (0–1). Smooth random.', link: 'https://strudel.cc/learn/signals/#perlin' },
+    saw: { summary: 'Sawtooth signal 0–1. Use .range(), .slow(), .segment().', link: 'https://strudel.cc/learn/signals/#saw' },
+    sine: { summary: 'Sine signal 0–1.', link: 'https://strudel.cc/learn/signals/#sine' },
+    tri: { summary: 'Triangle signal 0–1.', link: 'https://strudel.cc/learn/signals/#tri' },
+    square: { summary: 'Square signal 0–1.', link: 'https://strudel.cc/learn/signals/#square' },
+    brand: { summary: 'Binary random 0 or 1.', link: 'https://strudel.cc/learn/signals/#brand' },
+    brandBy: { summary: 'Binary random with probability for 1.', link: 'https://strudel.cc/learn/signals/#brandby' },
+    every: { summary: 'Apply function every n cycles (e.g. .every(4, rev)).', link: 'https://strudel.cc/learn/conditional-modifiers/' },
+    /* Code: https://strudel.cc/learn/code/ */
+    register: { summary: 'Register a custom chained function for reuse.', link: 'https://strudel.cc/learn/code/#write-your-own-chained-function' },
 };
 
 /**
@@ -155,10 +291,17 @@ function getWordAtPos(view, pos) {
     const len = doc.length;
     if (pos < 0 || pos >= len) return null;
     const isWordChar = (c) => /[a-zA-Z0-9_$]/.test(c);
-    if (!isWordChar(doc[pos])) return null;
-    let from = pos;
+    // Resolve position: if click is on non-word char, try to get an adjacent word
+    let p = pos;
+    if (!isWordChar(doc[p])) {
+        if (p > 0 && isWordChar(doc[p - 1])) p = p - 1;           // e.g. click just after "samples" before "("
+        else if (p < len - 1 && doc[p] === '.' && isWordChar(doc[p + 1])) p = p + 1;  // e.g. click on "." in ".dict("
+        else return null;
+    }
+    if (!isWordChar(doc[p])) return null;
+    let from = p;
     while (from > 0 && isWordChar(doc[from - 1])) from--;
-    let to = pos;
+    let to = p;
     while (to < len && isWordChar(doc[to])) to++;
     const name = doc.slice(from, to);
     return name ? { from, to, name } : null;
@@ -204,10 +347,13 @@ class StrudelApp {
             if (typeof setTime === 'function') setTime(() => 0);
             const { transpiler } = strudelTranspiler;
             this.strudelTranspiler = transpiler;
-            const { getAudioContext, webaudioOutput, initAudioOnFirstClick, registerSynthSounds } = strudelWebaudio;
+            const { getAudioContext, webaudioOutput, initAudioOnFirstClick, registerSynthSounds, setAudioContext } = strudelWebaudio;
 
-            // Initialize audio context
-            const ctx = getAudioContext();
+            // Initialize audio context: use explicit options to match REPL quality and reduce buzz/crackle.
+            // - latencyHint: 'playback' uses a larger buffer than default 'interactive', reducing buffer underruns.
+            // - setAudioContext() ensures superdough/webaudio use this same context (same as webaudioRepl).
+            const ctx = new AudioContext({ latencyHint: 'playback' });
+            setAudioContext(ctx);
             initAudioOnFirstClick();
             // Register default synths (sawtooth, sine, triangle, square, etc.) so .s("sawtooth") etc. work
             registerSynthSounds();
@@ -279,30 +425,85 @@ class StrudelApp {
     }
 
     /**
+     * Optional URL to a strudel.json that provides VCSL/GM sounds (gm_epiano1, gm_acoustic_bass, etc.).
+     * When set and loaded successfully, we do not substitute those with built-in synths.
+     * Set to a full URL when available (e.g. https://strudel.cc/sounds.json if strudel.cc exposes it, or a self-hosted strudel.json).
+     */
+    static get VCSL_SAMPLE_PACK_URL() {
+        return null;
+    }
+
+    /**
      * Default sample packs to load so built-in sounds (bd, sd, hh, gtr, moog, etc.) work without adding samples() in user code.
-     * Use github:user/repo or a full URL to a strudel.json. GM sounds (gm_epiano1, gm_acoustic_bass) come from VCSL on
-     * strudel.cc; VCSL does not expose a public strudel.json, so we only load packs that do (e.g. dirt-samples).
+     * If VCSL_SAMPLE_PACK_URL is set, it is tried first so GM sounds use VCSL instead of synth substitution.
      */
     static get DEFAULT_SAMPLE_PACKS() {
-        return [
-            'github:tidalcycles/dirt-samples',
-        ];
+        const packs = ['github:tidalcycles/dirt-samples'];
+        const vcsl = this.VCSL_SAMPLE_PACK_URL;
+        if (vcsl) packs.unshift(vcsl);
+        return packs;
+    }
+
+    /**
+     * Sample map for RolandTR909 from geikha/tidal-drum-machines so .bank("RolandTR909") works.
+     * Keys match Strudel's bank naming: RolandTR909_bd, RolandTR909_sd, etc.
+     */
+    static get ROLAND_TR909_SAMPLE_MAP() {
+        const base = 'machines/RolandTR909/rolandtr909-';
+        return {
+            RolandTR909_bd: [base + 'bd/Bassdrum-01.wav', base + 'bd/Bassdrum-02.wav', base + 'bd/Bassdrum-03.wav', base + 'bd/Bassdrum-04.wav'],
+            RolandTR909_sd: [base + 'sd/sd01.wav', base + 'sd/sd02.wav', base + 'sd/sd03.wav', base + 'sd/sd04.wav', base + 'sd/sd05.wav', base + 'sd/sd06.wav', base + 'sd/sd07.wav', base + 'sd/sd08.wav', base + 'sd/sd09.wav', base + 'sd/sd10.wav'],
+            RolandTR909_hh: [base + 'hh/hh01.wav', base + 'hh/hh02.wav', base + 'hh/hh03.wav', base + 'hh/hh04.wav'],
+            RolandTR909_oh: [base + 'oh/oh01.wav', base + 'oh/oh02.wav', base + 'oh/oh03.wav', base + 'oh/oh04.wav'],
+        };
+    }
+
+    /** Base URL for tidal-drum-machines (geikha) so RolandTR909 samples load. */
+    static get TIDAL_DRUM_MACHINES_BASE_URL() {
+        return 'https://raw.githubusercontent.com/geikha/tidal-drum-machines/main/';
     }
 
     /**
      * Load default sample packs so drums and common sounds are available without adding samples() in user code.
-     * Packs that fail (e.g. no strudel.json) are skipped with a warning.
+     * When VCSL pack loads successfully, GM substitution is disabled so gm_epiano1 / gm_acoustic_bass use real samples.
+     * Also loads RolandTR909 samples from tidal-drum-machines so .bank("RolandTR909") works.
      */
     async loadDefaultSamplePacks() {
         if (!this.strudelEvaluate) return;
+        this.vcslGmSoundsAvailable = false;
         const packs = this.constructor.DEFAULT_SAMPLE_PACKS;
+        const vcslUrl = this.constructor.VCSL_SAMPLE_PACK_URL;
         for (const pack of packs) {
             try {
                 await this.strudelEvaluate(`await samples('${pack}');`, false);
+                if (pack === vcslUrl) this.vcslGmSoundsAvailable = true;
                 console.log('[StrudelApp] Loaded default sample pack:', pack);
             } catch (e) {
                 console.warn('[StrudelApp] Could not load default sample pack', pack, e?.message || e);
             }
+        }
+        // Load RolandTR909 bank so .bank("RolandTR909") finds RolandTR909_bd, RolandTR909_sd, etc.
+        await this.ensureRolandTR909Loaded();
+    }
+
+    /**
+     * Load RolandTR909 sample map into the global sampler so .bank("RolandTR909") works.
+     * Uses globalThis.samples (same as REPL) so registration is in the correct sound map.
+     * Call at init and optionally again before play when code uses .bank("RolandTR909").
+     */
+    async ensureRolandTR909Loaded() {
+        try {
+            const samplesFn = typeof globalThis !== 'undefined' && globalThis.samples;
+            if (typeof samplesFn !== 'function') {
+                console.warn('[StrudelApp] samples not available on globalThis, skipping RolandTR909 load');
+                return;
+            }
+            const map = this.constructor.ROLAND_TR909_SAMPLE_MAP;
+            const baseUrl = this.constructor.TIDAL_DRUM_MACHINES_BASE_URL;
+            await samplesFn(map, baseUrl);
+            console.log('[StrudelApp] Loaded RolandTR909 drum bank (tidal-drum-machines)');
+        } catch (e) {
+            console.warn('[StrudelApp] Could not load RolandTR909 bank', e?.message || e);
         }
     }
 
@@ -457,6 +658,19 @@ class StrudelApp {
         if (!iframe) return;
         iframe.src = url;
         iframe.hidden = false;
+        // Switch to Docs panel so the user sees the loaded doc (in case Palette was selected)
+        const strudelDocs = document.getElementById('strudel-docs');
+        const strudelPallet = document.getElementById('strudel-pallet');
+        const showDocsBtn = document.getElementById('showDocsBtn');
+        const showPaletteBtn = document.getElementById('showPaletteBtn');
+        if (strudelDocs && strudelPallet) {
+            strudelDocs.removeAttribute('hidden');
+            strudelPallet.setAttribute('hidden', '');
+        }
+        if (showDocsBtn && showPaletteBtn) {
+            showDocsBtn.classList.add('button-depressed');
+            showPaletteBtn.classList.remove('button-depressed');
+        }
     }
 
     /**
@@ -1640,14 +1854,16 @@ class StrudelApp {
     }
 
     /**
-     * Substitute GM sample names with built-in synths so chord/bass parts play when VCSL isn't loaded.
-     * Applied to code before evaluate so user can keep gm_epiano1 / gm_acoustic_bass in the editor.
+     * Substitute GM sample names with built-in synths only when VCSL is not loaded.
+     * When vcslGmSoundsAvailable (VCSL pack loaded), leave code unchanged so gm_epiano1 / gm_acoustic_bass use real samples.
+     * Inline comments indicate which sample was substituted.
      */
     substituteGMWithBuiltinSynths(code) {
         if (!code || typeof code !== 'string') return code;
+        if (this.vcslGmSoundsAvailable) return code;
         return code
-            .replace(/\.s\(["']gm_epiano1[^"']*["']\)/g, '.s("triangle")')
-            .replace(/\.s\(["']gm_acoustic_bass["']\)/g, '.s("sawtooth")');
+            .replace(/\.s\(["']gm_epiano1[^"']*["']\)/g, '.s("triangle").gain(0.6) // was gm_epiano1')
+            .replace(/\.s\(["']gm_acoustic_bass["']\)/g, '.s("sawtooth").gain(0.5) // was gm_acoustic_bass');
     }
 
     /**
@@ -1738,10 +1954,10 @@ class StrudelApp {
 
         if (segments.length > 0) return [Math.max(0, origFrom), Math.min(originalPlayCode.length, origTo)];
 
-        // GM substitution (actual shorter than original)
+        // GM substitution (must match substituteGMWithBuiltinSynths including inline comments)
         const subs = [
-            [/\.s\(["']gm_epiano1[^"']*["']\)/g, '.s("triangle")'],
-            [/\.s\(["']gm_acoustic_bass["']\)/g, '.s("sawtooth")'],
+            [/\.s\(["']gm_epiano1[^"']*["']\)/g, '.s("triangle").gain(0.6) // was gm_epiano1'],
+            [/\.s\(["']gm_acoustic_bass["']\)/g, '.s("sawtooth").gain(0.5) // was gm_acoustic_bass'],
         ];
         const matches = [];
         for (const [regex, repl] of subs) {
@@ -1916,6 +2132,10 @@ class StrudelApp {
                 // If we have evaluate() from repl, use it (handles transpilation). With setup, wrap in IIFE so let/const share scope.
                 if (this.strudelEvaluate) {
                     try {
+                        // Load RolandTR909 bank before play if code uses .bank("RolandTR909") so sounds are registered
+                        if (/\.bank\s*\(\s*["']RolandTR909["']\s*\)/.test(code)) {
+                            await this.ensureRolandTR909Loaded();
+                        }
                         const playCode = this.buildStackPlayCodeFromDollarLines(dollarLines);
                         let codeToEval = setupCode
                             ? `(async function(){ ${setupCode};\nreturn (${playCode}); })()`
