@@ -271,11 +271,35 @@
     min-width: 0;
 }
 
+.pallet-example-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
 .pallet-example-label {
-    display: block;
     font-weight: 600;
     color: #dcdcaa;
-    margin-bottom: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.pallet-example-actions {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.pallet-example-actions .pallet-example-play {
+    order: 1;
+}
+
+.pallet-example-actions .pallet-example-copy {
+    order: 2;
 }
 
 .pallet-example-cm-container {
@@ -312,15 +336,13 @@
     word-break: break-word;
 }
 
-.pallet-example-actions {
-    display: flex;
-    flex-direction: row;
-    gap: 4px;
-    flex-shrink: 0;
-}
-
 .pallet-example-btn {
-    padding: 4px 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    min-width: 26px;
+    min-height: 26px;
     font-size: 11px;
     font-family: inherit;
     color: #b8c5ff;
@@ -329,6 +351,11 @@
     border-radius: 4px;
     cursor: pointer;
     -webkit-app-region: no-drag;
+}
+
+.pallet-example-btn svg {
+    display: block;
+    flex-shrink: 0;
 }
 
 .pallet-example-btn:hover {

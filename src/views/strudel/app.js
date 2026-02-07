@@ -6,6 +6,7 @@
 
 import * as strudelParse from './strudel-parse.cjs';
 import { initSettingsPanel as initSettingsPanelShared, DEFAULT_SETTINGS_FIELDS } from '../shared/settings-panel.js';
+import { DEFAULT_DOCUMENT_CONTENT } from './default-document-content.js';
 
 /**
  * Open documents data structure.
@@ -365,12 +366,14 @@ class StrudelApp {
 
     /**
      * Default sample packs to load so built-in sounds (bd, sd, hh, gtr, moog, etc.) work without adding samples() in user code.
-     * Use node:name to load from local src/views/strudel/sample-packs/name.json (no HTTP for map; audio still uses _base URL).
-     * Use github:user/repo to load from GitHub (HTTP).
+     * - node:name — load from local src/views/strudel/sample-packs/name.json (no HTTP for map; audio uses _base URL).
+     * - github:user/repo — load from GitHub (HTTP).
+     * - shabda:vcsl — VCSL / GM-style sounds (gm_epiano1, gm_acoustic_bass, etc.) from shabda.ndre.gr when available.
      */
     static get DEFAULT_SAMPLE_PACKS() {
         return [
             'node:dirt-samples',
+            'shabda:vcsl',
         ];
     }
 
@@ -673,7 +676,7 @@ class StrudelApp {
         // Start with one untitled document if none (restoreOpenFiles may have already loaded persisted files)
         if (this.openDocuments.length === 0) {
             this._untitledCounter += 1;
-            const doc = createDocument('untitled-' + this._untitledCounter, null, 'Untitled', '');
+            const doc = createDocument('untitled-' + this._untitledCounter, null, 'Untitled', DEFAULT_DOCUMENT_CONTENT);
             this.openDocuments.push(doc);
             this.activeDocumentId = doc.id;
         }
@@ -792,10 +795,32 @@ class StrudelApp {
             li.className = 'pallet-example-item';
             const main = document.createElement('div');
             main.className = 'pallet-example-main';
+            const headerRow = document.createElement('div');
+            headerRow.className = 'pallet-example-header';
             const labelEl = document.createElement('span');
             labelEl.className = 'pallet-example-label';
             labelEl.textContent = ex.label ?? ex.id ?? 'Untitled';
-            main.appendChild(labelEl);
+            headerRow.appendChild(labelEl);
+            const actions = document.createElement('div');
+            actions.className = 'pallet-example-actions';
+            const playBtn = document.createElement('button');
+            playBtn.type = 'button';
+            playBtn.className = 'pallet-example-btn pallet-example-play';
+            playBtn.title = 'Play';
+            playBtn.setAttribute('aria-label', 'Play');
+            playBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+            playBtn.addEventListener('click', () => this.playExampleCode(ex.code, viewIndex));
+            const copyBtn = document.createElement('button');
+            copyBtn.type = 'button';
+            copyBtn.className = 'pallet-example-btn pallet-example-copy';
+            copyBtn.title = 'Copy to clipboard';
+            copyBtn.setAttribute('aria-label', 'Copy to clipboard');
+            copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+            copyBtn.addEventListener('click', () => this.copyExampleToClipboard(ex.code));
+            actions.appendChild(playBtn);
+            actions.appendChild(copyBtn);
+            headerRow.appendChild(actions);
+            main.appendChild(headerRow);
             let viewIndex = -1;
             if (ex.code) {
                 const codeMount = document.createElement('div');
@@ -805,23 +830,6 @@ class StrudelApp {
                 mounts.push({ el: codeMount, code: ex.code });
             }
             li.appendChild(main);
-            const actions = document.createElement('div');
-            actions.className = 'pallet-example-actions';
-            const playBtn = document.createElement('button');
-            playBtn.type = 'button';
-            playBtn.className = 'pallet-example-btn pallet-example-play';
-            playBtn.title = 'Play';
-            playBtn.textContent = 'Play';
-            playBtn.addEventListener('click', () => this.playExampleCode(ex.code, viewIndex));
-            const copyBtn = document.createElement('button');
-            copyBtn.type = 'button';
-            copyBtn.className = 'pallet-example-btn pallet-example-copy';
-            copyBtn.title = 'Copy to clipboard';
-            copyBtn.textContent = 'Copy';
-            copyBtn.addEventListener('click', () => this.copyExampleToClipboard(ex.code));
-            actions.appendChild(playBtn);
-            actions.appendChild(copyBtn);
-            li.appendChild(actions);
             list.appendChild(li);
         }
         contentEl.appendChild(list);
