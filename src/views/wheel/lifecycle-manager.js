@@ -12,8 +12,9 @@ class WheelQueueManager extends SharedQueueManager {
         super(windowConfig);
         this.windowConfig = windowConfig;
         this.wheelWindow = null; // Will store reference to wheel window
-        // Extract wheel options from window config
-        this.wheelOptions = windowConfig.wheelOptions || [];
+        // Extract wheel options from window config (exclude options with enabled: false)
+        const raw = windowConfig.options?.wheel || windowConfig.wheelOptions || [];
+        this.wheelOptions = raw.filter(opt => opt.enabled !== false);
         console.log(`[WheelQueueManager] Constructor called with wheelOptions:`, this.wheelOptions.length);
         // Now initialize queues after wheelOptions is set
         this.initializeQueues();

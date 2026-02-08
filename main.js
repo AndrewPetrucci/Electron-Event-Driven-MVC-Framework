@@ -332,20 +332,6 @@ function registerIpcHandlers() {
         }
     });
 
-    // Strudel: load sample pack JSON from local sample-packs/ (no HTTP for map; audio still uses _base URL)
-    ipcMain.handle('read-sample-pack', async (event, packName) => {
-        try {
-            const safeName = path.basename(packName).replace(/[^a-zA-Z0-9-_]/g, '');
-            if (!safeName) return { success: false, error: 'Invalid pack name' };
-            const packPath = path.join(__dirname, 'src', 'views', 'strudel', 'sample-packs', safeName + '.json');
-            const content = fs.readFileSync(packPath, 'utf-8');
-            const json = JSON.parse(content);
-            return { success: true, json };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    });
-
     ipcMain.handle('rename-file', async (event, filePath, newName) => {
         if (!filePath || !newName || typeof newName !== 'string') {
             return { success: false, error: 'Invalid arguments' };
@@ -359,37 +345,6 @@ function registerIpcHandlers() {
             return { success: true, newFilePath: newPath };
         } catch (error) {
             return { success: false, error: error.message };
-        }
-    });
-
-    // Strudel: persist open files across runs (stored in app userData)
-    const strudelOpenFilesPath = path.join(app.getPath('userData'), 'strudel-open-files.json');
-    ipcMain.handle('get-strudel-open-files', async () => {
-        try {
-            if (fs.existsSync(strudelOpenFilesPath)) {
-                const data = JSON.parse(fs.readFileSync(strudelOpenFilesPath, 'utf-8'));
-                return {
-                    openFilePaths: Array.isArray(data.openFilePaths) ? data.openFilePaths : [],
-                    activeFilePath: data.activeFilePath ?? null
-                };
-            }
-        } catch (err) {
-            console.warn('[Strudel] Failed to read persisted open files:', err);
-        }
-        return { openFilePaths: [], activeFilePath: null };
-    });
-    ipcMain.handle('set-strudel-open-files', async (event, state) => {
-        try {
-            const dir = path.dirname(strudelOpenFilesPath);
-            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-            fs.writeFileSync(strudelOpenFilesPath, JSON.stringify({
-                openFilePaths: state.openFilePaths || [],
-                activeFilePath: state.activeFilePath ?? null
-            }), 'utf-8');
-            return { success: true };
-        } catch (err) {
-            console.warn('[Strudel] Failed to write persisted open files:', err);
-            return { success: false };
         }
     });
 
@@ -489,11 +444,12 @@ app.on('ready', () => {
         // Apply position offset if configured
         const window = windows[windowId];
 
-        // Pass wheel options to wheel window via IPC
+        // Pass wheel options to wheel window via IPC (exclude options with enabled: false)
         if (windowConfig.id === 'wheel' && windowConfig?.options?.wheel) {
+            const enabledWheelOptions = windowConfig.options.wheel.filter(opt => opt.enabled !== false);
             window.webContents.once('did-finish-load', () => {
-                window.webContents.send('load-wheel-options', windowConfig?.options?.wheel);
-                console.log(`[Main] Sent ${windowConfig?.options?.wheel.length} wheel options to wheel window`);
+                window.webContents.send('load-wheel-options', enabledWheelOptions);
+                console.log(`[Main] Sent ${enabledWheelOptions.length} wheel options to wheel window (${windowConfig.options.wheel.length} total in config)`);
                 
                 // Send connection status if token is available
                 if (savedToken || process.env.TWITCH_OAUTH_TOKEN) {
@@ -513,9 +469,10 @@ app.on('ready', () => {
 
     });
 
-    // Extract wheel options from config instead of loading from file
+    // Extract wheel options from config (exclude options with enabled: false)
     const wheelWindowConfig = ecosystemConfig.windows.find(w => w.id === 'wheel');
-    let allWheelOptions = wheelWindowConfig?.options?.wheel || [];
+    const rawWheelOptions = wheelWindowConfig?.options?.wheel || [];
+    let allWheelOptions = rawWheelOptions.filter(opt => opt.enabled !== false);
     uniqueApplications.clear(); // Clear any previous applications
 
     // Extract unique applications
