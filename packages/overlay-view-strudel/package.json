@@ -1,0 +1,1 @@
+{"name":"overlay-view-strudel","version":"1.0.0","description":"Strudel editor overlay view","license":"AGPL-3.0","overlay":{"type":"view","id":"strudel"},"dependencies":{"overlay-core":"file:../overlay-core"}}

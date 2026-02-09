@@ -77,7 +77,7 @@ These contracts allow the core to treat every view/controller/application the sa
 
 ## 4. Implementation Strategy
 
-### Phase 1: Configurable base paths (no new repos yet)
+### Phase 1: Configurable base paths (no new repos yet) — **DONE**
 
 1. **Add a small runtime config** (e.g. `overlay.config.json` or a section in `windows-config.json`) that defines base directories:
    ```json
@@ -103,7 +103,7 @@ These contracts allow the core to treat every view/controller/application the sa
 
 After Phase 1, the core no longer hardcodes `src/`; it only uses the configured path lists. You can then add a second path (e.g. `plugins/views`) and put a cloned view repo there to test.
 
-### Phase 2: Package-based discovery (optional but recommended)
+### Phase 2: Package-based discovery (optional but recommended) — **DONE**
 
 1. **Scan `node_modules`** for packages that have `overlay.type` in `package.json` (view | controller | application) and `overlay.id`.
 2. **Resolve paths**:
@@ -114,7 +114,9 @@ After Phase 1, the core no longer hardcodes `src/`; it only uses the configured 
 
 This lets a sub-repo be published (or linked) as e.g. `@your-scope/overlay-view-wheel` and the core will discover it when installed.
 
-### Phase 3: Split into separate repos
+**Overlay package contract:** In each plugin package's `package.json`, set `overlay.type` (`"view"` | `"controller"` | `"application"`), `overlay.id` (lowercase id), and optionally `overlay.viewEntry` / `overlay.controllerEntry` / `overlay.applicationEntry` (path relative to package root; default `"."`). Views must expose `index.html` and `lifecycle-manager.js` in that folder; controllers must expose `executor-controller.js`; applications must expose a `config/` directory.
+
+### Phase 3: Split into separate repos — **STARTED**
 
 1. **Create the core repo** (e.g. `overlay-core`):
    - Move only core files (main, preload, shared, config loader, twitch, token-storage, path resolution).
@@ -166,4 +168,8 @@ This lets a sub-repo be published (or linked) as e.g. `@your-scope/overlay-view-
 - **Sub-repos** implement the same **contracts** (view lifecycle, controller executor, application config layout) and are discovered via **configurable directories** and optionally **npm packages**.
 - Each sub-repo **can function on its own** by depending on overlay-core and using a **dev harness** (or integration app) that registers only that package, so you get independent development and CI without losing the single-app experience when you combine everything.
 
-If you want to proceed, the next concrete step is implementing Phase 1 (config file + path resolver and wiring it into the four places that currently use hardcoded paths).
+**Phase 1 implemented:** `overlay.config.json`, `src/path-resolver.js`, and wiring in main.js, preload-generator.js, queue-worker.js (+ OVERLAY_APP_ROOT in lifecycle-manager spawn), and application-config-loader.js. Optional `view:wheel` HTML syntax is supported in windows-config; legacy paths still work.
+
+**Phase 2 implemented:** `discoverOverlayPackages()` in `src/path-resolver.js` scans `node_modules` for packages with `overlay.type` and `overlay.id`; view/controller/application resolution merges directory-based and package-based results. Optional `scanNodeModules: false` in `overlay.config.json` disables scanning.
+
+**Phase 3 implemented:** All views and controllers live in **packages**. npm **workspaces** (`packages/*`) include: **overlay-core** (shared runtime); view packages **overlay-view-wheel**, **overlay-view-boilerplate**, **overlay-view-filewatcher**, **overlay-view-oauthconnections**, **overlay-view-sticky**, **overlay-view-strudel**; controller packages **overlay-controller-pythonkeys**, **overlay-controller-file-writer**, **overlay-controller-mod-file-writer**; **overlay-application-skyrim**. `src/views` and `src/controllers` no longer contain view/controller code. Root sets `process.env.OVERLAY_APP_ROOT`; build `asarUnpack` includes all overlay packages. **Moving to separate repos:** Run `node scripts/prepare-package-for-repo.js <package-name>` to copy a package to `../<package-name>/` with its own git repo; then follow that folder’s `REPO-README.md` to add remote and push. See `packages/README.md` for the full list and for using packages from git/npm in the integration app.

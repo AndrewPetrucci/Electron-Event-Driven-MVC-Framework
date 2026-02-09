@@ -1,0 +1,7 @@
+{
+  "paths": {
+    "views": ["src/views"],
+    "controllers": ["src/controllers"],
+    "applications": ["src/applications"]
+  }
+}

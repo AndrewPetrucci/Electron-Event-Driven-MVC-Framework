@@ -3,7 +3,7 @@
         {
             "id": "twitch",
             "name": "Twitch Window",
-            "html": "src/views/oauthConnections/index.html",
+            "html": "view:oauthConnections",
             "enabled": false,
             "position": {
                 "offset": 1,
@@ -20,7 +20,7 @@
         {
             "id": "wheel",
             "name": "Twitch Wheel!!!",
-            "html": "src/views/wheel/index.html",
+            "html": "view:wheel",
             "enabled": false,
             "position": {
                 "offset": 0,
@@ -131,7 +131,7 @@
         {
             "id": "boilerplate",
             "name": "Boilerplate Window",
-            "html": "src/views/boilerplate/index.html",
+            "html": "view:boilerplate",
             "enabled": false,
             "position": {
                 "offset": 1,
@@ -152,7 +152,7 @@
         {
             "id": "sticky",
             "name": "Sticky Window",
-            "html": "src/views/sticky/index.html",
+            "html": "view:sticky",
             "enabled": false,
             "position": {
                 "offset": 0,
@@ -175,7 +175,7 @@
         {
             "id": "fileWatcher",
             "name": "File Watcher",
-            "html": "src/views/fileWatcher/index.html",
+            "html": "view:fileWatcher",
             "enabled": false,
             "position": {
                 "offset": 2,
@@ -189,7 +189,7 @@
         {
             "id": "strudel",
             "name": "Strudel Window",
-            "html": "src/views/strudel/index.html",
+            "html": "view:strudel",
             "enabled": true,
             "position": {
                 "offset": 1,
@@ -203,7 +203,7 @@
         {
             "id": "wheel",
             "name": "Twitch Wheel!!!",
-            "html": "src/views/wheel/index.html",
+            "html": "view:wheel",
             "enabled": true,
             "position": {
                 "offset": 0,

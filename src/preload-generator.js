@@ -6,11 +6,12 @@ const path = require('path');
  * Can be called with either:
  * 1. Map of instantiated managers (after initialization)
  * 2. Array of window configs (before initialization, scans for lifecycle managers)
- * 
+ *
  * @param {Map|Array} managersOrConfigs - Either Map of managers or array of window configs
  * @param {string} outputPath - Path where preload.js should be written
+ * @param {object} [pathResolver] - Optional path resolver (getPathResolver) for resolving view paths
  */
-function generatePreload(managersOrConfigs, outputPath) {
+function generatePreload(managersOrConfigs, outputPath, pathResolver) {
     const apiDefinitions = {};
     
     if (managersOrConfigs instanceof Map) {
@@ -18,7 +19,7 @@ function generatePreload(managersOrConfigs, outputPath) {
         collectFromManagers(managersOrConfigs, apiDefinitions);
     } else if (Array.isArray(managersOrConfigs)) {
         // Scan lifecycle manager files before instantiation
-        collectFromConfigs(managersOrConfigs, apiDefinitions);
+        collectFromConfigs(managersOrConfigs, apiDefinitions, pathResolver);
     }
 
     // Add core APIs that are always needed (from main.js)
@@ -55,42 +56,33 @@ function collectFromManagers(queueManagers, apiDefinitions) {
 
 /**
  * Collect API definitions by scanning lifecycle manager files
+ * @param {object} [pathResolver] - If provided, use resolveLifecycleManagerPath; else use default src/views path
  */
-function collectFromConfigs(windowConfigs, apiDefinitions) {
+function collectFromConfigs(windowConfigs, apiDefinitions, pathResolver) {
     const baseDir = path.join(__dirname, '..');
     
     windowConfigs.forEach(windowConfig => {
         if (!windowConfig.enabled) return;
         
         const windowType = windowConfig.id;
-        const lifecycleManagerPath = path.join(baseDir, `src/views/${windowType}/lifecycle-manager.js`);
+        const lifecycleManagerPath = pathResolver
+            ? pathResolver.resolveLifecycleManagerPath(windowType)
+            : path.join(baseDir, `src/views/${windowType}/lifecycle-manager.js`);
         
-        if (fs.existsSync(lifecycleManagerPath)) {
+        if (lifecycleManagerPath && fs.existsSync(lifecycleManagerPath)) {
             try {
-                // Temporarily require the lifecycle manager to get its static preload API
-                // Clear require cache to avoid issues
+                // Only use static getPreloadAPI() here. Do NOT instantiate the class:
+                // constructors often register ipcMain handlers, which would then be
+                // registered again in initializeQueueManagers and cause "second handler" errors.
                 delete require.cache[require.resolve(lifecycleManagerPath)];
                 const LifecycleManagerClass = require(lifecycleManagerPath);
-                
-                // Try to get preload API from class (static method) or create instance
                 let api = {};
                 if (typeof LifecycleManagerClass.getPreloadAPI === 'function') {
-                    // Static method
                     api = LifecycleManagerClass.getPreloadAPI();
+                    mergeAPIs(api, windowType, apiDefinitions);
                 } else {
-                    // Try creating a temporary instance
-                    try {
-                        const tempInstance = new LifecycleManagerClass(windowConfig);
-                        if (typeof tempInstance.getPreloadAPI === 'function') {
-                            api = tempInstance.getPreloadAPI();
-                        }
-                    } catch (err) {
-                        // Some managers might need full initialization, skip for now
-                        console.log(`[PreloadGenerator] Could not instantiate ${windowType} for preload API, will collect after initialization`);
-                    }
+                    console.log(`[PreloadGenerator] ${windowType} has no static getPreloadAPI; will collect from manager after init`);
                 }
-                
-                mergeAPIs(api, windowType, apiDefinitions);
             } catch (error) {
                 console.error(`[PreloadGenerator] Error loading lifecycle manager for ${windowType}:`, error);
             }

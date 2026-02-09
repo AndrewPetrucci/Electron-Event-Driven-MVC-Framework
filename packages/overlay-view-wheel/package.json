@@ -1,0 +1,13 @@
+{
+  "name": "overlay-view-wheel",
+  "version": "1.0.0",
+  "description": "Twitch wheel overlay view",
+  "license": "AGPL-3.0",
+  "overlay": {
+    "type": "view",
+    "id": "wheel"
+  },
+  "dependencies": {
+    "overlay-core": "file:../overlay-core"
+  }
+}

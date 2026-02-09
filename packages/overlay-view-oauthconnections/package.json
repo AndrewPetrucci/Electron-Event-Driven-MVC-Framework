@@ -1,0 +1,1 @@
+{"name":"overlay-view-oauthconnections","version":"1.0.0","description":"OAuth connections overlay view","license":"AGPL-3.0","overlay":{"type":"view","id":"oauthConnections"},"dependencies":{"overlay-core":"file:../overlay-core"}}

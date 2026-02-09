@@ -1,0 +1,1 @@
+{"name":"overlay-view-sticky","version":"1.0.0","description":"Sticky overlay view","license":"AGPL-3.0","overlay":{"type":"view","id":"sticky"},"dependencies":{"overlay-core":"file:../overlay-core"}}

@@ -4,14 +4,15 @@
  * Also bundles superdough and supradough AudioWorklets so LPF and other
  * effects work (addModule needs a loadable URL; ?audioworklet is Vite-only).
  * Run: node build-strudel.js
- * Output: src/views/strudel/dist/app.js, dist/superdough-worklets.js, dist/supradough-worklet.js
+ * Output: packages/overlay-view-strudel/dist/app.js, dist/superdough-worklets.js, dist/supradough-worklet.js
  */
 const esbuild = require('esbuild');
 const path = require('path');
 const fs = require('fs');
 
-const entry = path.join(__dirname, 'src', 'views', 'strudel', 'app.js');
-const outDir = path.join(__dirname, 'src', 'views', 'strudel', 'dist');
+const strudelRoot = path.join(__dirname, 'packages', 'overlay-view-strudel');
+const entry = path.join(strudelRoot, 'app.js');
+const outDir = path.join(strudelRoot, 'dist');
 const outFile = path.join(outDir, 'app.js');
 
 // Populated during main build so we can emit worklet bundles afterward.

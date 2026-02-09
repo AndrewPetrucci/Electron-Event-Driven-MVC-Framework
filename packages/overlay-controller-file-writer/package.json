@@ -1,0 +1,1 @@
+{"name":"overlay-controller-file-writer","version":"1.0.0","description":"File writer controller for overlay","license":"AGPL-3.0","overlay":{"type":"controller","id":"file-writer"}}

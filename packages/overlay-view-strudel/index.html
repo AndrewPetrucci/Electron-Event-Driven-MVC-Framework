@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strudel Overlay</title>
+    <link rel="stylesheet" href="shared/window-bar.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="window-bar interactive-overlay-element" data-window-bar>
+            <div class="window-bar-left">
+                <span class="window-title">Strudel Overlay</span>
+                <div class="button-container strudel-toolbar" data-no-drag>
+                    <button class="window-btn strudel-tool-btn play-btn" id="playBtn" title="Play">
+                        <svg class="strudel-tool-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <button class="window-btn strudel-tool-btn stop-btn" id="stopBtn" title="Stop">
+                        <svg class="strudel-tool-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg>
+                    </button>
+                    <span id="strudelCycleDisplay" class="strudel-cycle-display" aria-live="polite" aria-label="Current cycle"></span>
+                    <button class="window-btn strudel-tool-btn update-btn" id="updateBtn" title="Update">
+                        <svg class="strudel-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1 -9 -9 9 9 0 0 1 9 9"/><path d="M21 3v6h-6"/></svg>
+                    </button>
+                    <button class="window-btn strudel-tool-btn save-btn" id="saveBtn" title="Save">
+                        <svg class="strudel-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+                    </button>
+                    <button class="window-btn strudel-tool-btn open-btn" id="openBtn" title="Open">
+                        <svg class="strudel-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                    </button>
+                    <button class="window-btn strudel-tool-btn new-btn" id="newBtn" title="New file">
+                        <svg class="strudel-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15h6"/></svg>
+                    </button>
+                    <span class="strudel-export-sep" aria-hidden="true">|</span>
+                    <label class="strudel-export-label" for="strudelExportCycles">Cycles</label>
+                    <input type="number" id="strudelExportCycles" class="strudel-export-cycles" min="1" max="999" value="4" title="Number of cycles to export" aria-label="Export cycles">
+                    <button type="button" class="window-btn strudel-tool-btn export-wav-btn" id="exportWavBtn" title="Export as WAV (offline render)">
+                        <svg class="strudel-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+                        <span class="strudel-export-wav-text">Export WAV</span>
+                    </button>
+                </div>
+                <div id="strudel-open-docs" class="strudel-open-docs" data-no-drag></div>
+            </div>
+            <div class="button-container window-bar-right">
+                <div class="settings-wrap">
+                    <button class="window-btn settings-btn" id="settingsBtn" title="Settings" aria-expanded="false" aria-haspopup="true">
+                        <svg class="strudel-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                    </button>
+                    <div id="settingsPanel" class="settings-panel" hidden aria-label="Window settings" data-no-drag>
+                        <div class="settings-filter-row">
+                            <input type="text" id="settingsFilter" class="settings-filter" placeholder="Filter…" aria-label="Filter settings rows" />
+                            <span id="settingsRowCount" class="settings-row-count" aria-live="polite"></span>
+                        </div>
+                        <table class="settings-table">
+                            <tbody id="settingsTableBody"></tbody>
+                        </table>
+                        <div class="settings-actions">
+                            <button type="button" class="window-btn close-settings-btn" id="closeSettingsBtn">Close</button>
+                            <button type="button" class="window-btn apply-settings-btn" id="applySettingsBtn">Apply</button>
+                        </div>
+                    </div>
+                </div>
+                <button class="window-btn minimize-btn" id="minimizeBtn" title="Minimize" aria-label="Minimize">
+                    <svg class="window-bar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/></svg>
+                </button>
+                <button class="window-btn maximize-btn" id="maximizeBtn" title="Maximize" aria-label="Maximize">
+                    <svg class="window-bar-icon maximize-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="1"/></svg>
+                    <svg class="window-bar-icon restore-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M8 4H6a2 2 0 00-2 2v2"/><path d="M16 4h2a2 2 0 012 2v2"/><path d="M4 16v2a2 2 0 002 2h2"/><path d="M20 16v2a2 2 0 01-2 2h-2"/></svg>
+                </button>
+                <button class="window-btn close-btn" id="closeBtn" title="Close" aria-label="Close">
+                    <svg class="window-bar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="content">
+            <div id="strudel-container">
+                <div class="strudel-editor-wrap">
+                    <div id="strudel-cm-root" class="strudel-cm-root"></div>
+                    <textarea class="strudel-editor strudel-editor-fallback" id="strudel-editor" spellcheck="false" placeholder="Strudel code…" style="display: none;"></textarea>
+                </div>
+                <div class="vertical-split">
+                    <div class="horrizontal-split">
+                        <button type="button" class="horrizontal-split-btn button-depressed" id="showPalletBtn" title="Show pallet">Pallet</button>
+                        <button type="button" class="horrizontal-split-btn" id="showDocsBtn" title="Show documentation">Docs</button>
+                    </div>
+                    <div class="docs-container">
+                        <div id="strudel-pallet" class="strudel-pallet" aria-label="Strudel palette">
+                            <div class="pallet-button-container"></div>
+                            <div class="strudel-pallet-content"></div>
+                        </div>
+                        <div id="strudel-docs" class="strudel-docs" aria-label="Function documentation" hidden>
+                            <iframe id="strudel-docs-iframe" class="strudel-docs-iframe" title="Strudel documentation" src="https://strudel.cc/workshop/getting-started"></iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="shared/window-bar.js"></script>
+    <script>
+      (function () {
+        var s = document.createElement('script');
+        s.src = 'dist/app.js';
+        s.onerror = function () {
+          var t = document.createElement('script');
+          t.src = 'app.js';
+          document.body.appendChild(t);
+        };
+        s.onload = function () { /* bundled app loaded */ };
+        document.body.appendChild(s);
+      })();
+    </script>
+</body>
+
+</html>

@@ -10,7 +10,7 @@ const {
   getDollarBlocksWithSegments,
   mapPatternRangeToDoc,
   normalizeCodeForParsing,
-} = require('../src/views/strudel/strudel-parse.cjs');
+} = require('../packages/overlay-view-strudel/strudel-parse.cjs');
 
 function assert(condition, message) {
   if (!condition) {

@@ -20,6 +20,7 @@
     },
     "author": "Your Name",
     "license": "AGPL-3.0",
+    "workspaces": ["packages/*"],
     "dependencies": {
         "@strudel/codemirror": "^1.3.0",
         "@strudel/core": "^1.0.0",
@@ -31,7 +32,18 @@
         "dotenv": "^16.0.0",
         "express": "^5.2.1",
         "prismjs": "^1.29.0",
-        "tmi.js": "^1.8.5"
+        "tmi.js": "^1.8.5",
+        "overlay-controller-pythonkeys": "git+https://github.com/AndrewPetrucci/overlay-controller-pythonkeys.git",
+        "overlay-application-skyrim": "git+https://github.com/AndrewPetrucci/overlay-application-skyrim.git",
+        "overlay-core": "git+https://github.com/AndrewPetrucci/overlay-core.git",
+        "overlay-view-wheel": "git+https://github.com/AndrewPetrucci/overlay-view-wheel.git",
+        "overlay-view-boilerplate": "git+https://github.com/AndrewPetrucci/overlay-view-boilerplate.git",
+        "overlay-view-filewatcher": "git+https://github.com/AndrewPetrucci/overlay-view-filewatcher.git",
+        "overlay-view-oauthconnections": "git+https://github.com/AndrewPetrucci/overlay-view-oauthconnections.git",
+        "overlay-view-sticky": "git+https://github.com/AndrewPetrucci/overlay-view-sticky.git",
+        "overlay-view-strudel": "git+https://github.com/AndrewPetrucci/overlay-view-strudel.git",
+        "overlay-controller-file-writer": "git+https://github.com/AndrewPetrucci/overlay-controller-file-writer.git",
+        "overlay-controller-mod-file-writer": "git+https://github.com/AndrewPetrucci/overlay-controller-mod-file-writer.git"
     },
     "devDependencies": {
         "cross-env": "^10.1.0",
@@ -42,19 +54,27 @@
     },
     "build": {
         "files": [
-            "src/views/shared/queue-worker.js",
             "src/**",
-            "src/**/*",
             "main.js",
             "preload.js",
             "package.json",
+            "overlay.config.json",
             "windows-config.json",
             "node.exe"
         ],
         "asarUnpack": [
-            "src/views/shared/queue-worker.js",
-            "src/controllers/**",
-            "src/applications/**"
+            "src/applications/**",
+            "node_modules/overlay-controller-pythonkeys/**",
+            "node_modules/overlay-controller-file-writer/**",
+            "node_modules/overlay-controller-mod-file-writer/**",
+            "node_modules/overlay-application-skyrim/**",
+            "node_modules/overlay-core/**",
+            "node_modules/overlay-view-wheel/**",
+            "node_modules/overlay-view-boilerplate/**",
+            "node_modules/overlay-view-filewatcher/**",
+            "node_modules/overlay-view-oauthconnections/**",
+            "node_modules/overlay-view-sticky/**",
+            "node_modules/overlay-view-strudel/**"
         ]
     }
 }

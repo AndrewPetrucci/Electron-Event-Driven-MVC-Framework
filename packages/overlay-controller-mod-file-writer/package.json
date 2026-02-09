@@ -1,0 +1,1 @@
+{"name":"overlay-controller-mod-file-writer","version":"1.0.0","description":"Mod file writer controller for overlay (e.g. Skyrim ConsoleCommands.json)","license":"AGPL-3.0","overlay":{"type":"controller","id":"mod-file-writer"}}

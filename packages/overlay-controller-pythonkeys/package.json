@@ -1,0 +1,10 @@
+{
+  "name": "overlay-controller-pythonkeys",
+  "version": "1.0.0",
+  "description": "PythonKeys controller for overlay (send keys / insert text)",
+  "license": "AGPL-3.0",
+  "overlay": {
+    "type": "controller",
+    "id": "pythonkeys"
+  }
+}

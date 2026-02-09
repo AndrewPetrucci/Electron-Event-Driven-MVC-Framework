@@ -13,16 +13,22 @@ const fs = require('fs');
 const path = require('path');
 
 class ApplicationConfigLoader {
-    constructor(applicationName = 'skyrim') {
+    /**
+     * @param {string} [applicationName='skyrim'] - Application name (folder under applications/)
+     * @param {object} [pathResolver] - Optional path resolver from getPathResolver(); if provided, uses configured paths
+     */
+    constructor(applicationName = 'skyrim', pathResolver) {
         this.applicationName = applicationName;
-        this.applicationDir = path.join(__dirname, '..', 'applications', applicationName);
-        this.configDir = path.join(this.applicationDir, 'config');
-        this.executorDir = path.join(this.applicationDir, 'executors');
-
-        // Patch: resolve to app.asar.unpacked if running from asar
-        this.applicationDir = resolveUnpackedPath(this.applicationDir);
-        this.configDir = resolveUnpackedPath(this.configDir);
-        this.executorDir = resolveUnpackedPath(this.executorDir);
+        let applicationDir;
+        if (pathResolver && pathResolver.resolveApplicationPath) {
+            applicationDir = pathResolver.resolveApplicationPath(applicationName);
+        }
+        if (!applicationDir) {
+            applicationDir = path.join(__dirname, '..', 'applications', applicationName);
+        }
+        this.applicationDir = resolveUnpackedPath(applicationDir);
+        this.configDir = resolveUnpackedPath(path.join(this.applicationDir, 'config'));
+        this.executorDir = resolveUnpackedPath(path.join(this.applicationDir, 'executors'));
 
         this.wheelOptions = [];
         this.controllers = {};
@@ -71,18 +77,22 @@ class ApplicationConfigLoader {
         }
     }
 
-    listAvailableApplications() {
+    /**
+     * @param {object} [pathResolver] - Optional path resolver; if provided, uses listApplicationNames()
+     */
+    listAvailableApplications(pathResolver) {
         try {
+            if (pathResolver && typeof pathResolver.listApplicationNames === 'function') {
+                return pathResolver.listApplicationNames();
+            }
             const applicationsDir = path.join(__dirname, '..', 'applications');
             if (!fs.existsSync(applicationsDir)) {
                 return [];
             }
-
             const applications = fs.readdirSync(applicationsDir).filter(file => {
                 const fullPath = path.join(applicationsDir, file);
                 return fs.statSync(fullPath).isDirectory() && file !== 'README.md';
             });
-
             return applications;
         } catch (error) {
             console.error('[Config] Error listing applications:', error.message);

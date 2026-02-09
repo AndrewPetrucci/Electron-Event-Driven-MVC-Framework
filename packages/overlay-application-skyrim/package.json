@@ -1,0 +1,10 @@
+{
+  "name": "overlay-application-skyrim",
+  "version": "1.0.0",
+  "description": "Skyrim application config and wheel options for overlay",
+  "license": "AGPL-3.0",
+  "overlay": {
+    "type": "application",
+    "id": "skyrim"
+  }
+}

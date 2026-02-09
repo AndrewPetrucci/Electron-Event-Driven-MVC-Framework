@@ -1,3 +1,6 @@
+// App root for overlay path resolution and worker spawn (used when core runs from node_modules)
+process.env.OVERLAY_APP_ROOT = process.env.OVERLAY_APP_ROOT || require('path').resolve(__dirname);
+
 // --- Simple Express server for OAuth redirect ---
 const express = require('express');
 const oauthApp = express();
@@ -74,6 +77,11 @@ const fs = require('fs');
 const ApplicationConfigLoader = require('./src/application-config-loader');
 const TokenStorage = require('./src/token-storage');
 const { generatePreload } = require('./src/preload-generator');
+const { getPathResolver } = require('./src/path-resolver');
+
+// Load overlay path config (exe dir or app dir) and create resolver for views/controllers/applications
+const overlayConfig = loadFromExeDir('overlay.config.json');
+const pathResolver = getPathResolver(__dirname, overlayConfig);
 
 const windows = {}; // Map to store windows by ID
 let applicationConfigs = {};
@@ -108,7 +116,15 @@ function setStoredWindowDimensions(window, width, height) {
 
 function createWindow(windowConfig = { html: 'src/windows/boilderplate/index.html' }, defaults = {}) {
     const htmlFile = windowConfig.html || 'src/windows/boilderplate/index.html';
-    
+    // Resolve HTML path: "view:wheel" -> path resolver; else treat as path relative to app root
+    let htmlPath;
+    if (typeof htmlFile === 'string' && htmlFile.startsWith('view:')) {
+        const viewId = htmlFile.slice(5).trim();
+        htmlPath = pathResolver.resolveViewHtml(viewId) || path.join(__dirname, 'src/views', viewId, 'index.html');
+    } else {
+        htmlPath = path.isAbsolute(htmlFile) ? htmlFile : path.join(__dirname, htmlFile);
+    }
+
     // Merge defaults with window-specific windowConfig
     const windowOptions = {
         width: defaults.width ?? WINDOW_WIDTH,
@@ -147,9 +163,9 @@ function createWindow(windowConfig = { html: 'src/windows/boilderplate/index.htm
     // Set stored dimensions using helper function on initialization
     setStoredWindowDimensions(window, windowOptions.width, windowOptions.height);
     
-    console.log(`Created window with ID: ${windowId} - Loading: ${htmlFile}`);
+    console.log(`Created window with ID: ${windowId} - Loading: ${htmlPath}`);
 
-    window.loadFile(htmlFile);
+    window.loadFile(htmlPath);
 
     // Open DevTools in dev mode
     if (process.argv.includes('--dev')) {
@@ -184,11 +200,9 @@ function initializeQueueManagers(ecosystemConfig, appConfigs) {
         const windowType = windowConfig.id;
 
         try {
-            // Try to load the queue manager for this window type
-            const queueManagerPath = path.join(__dirname, `src/views/${windowType}/lifecycle-manager`);
-
-            // Check if the queue manager file exists
-            if (!fs.existsSync(queueManagerPath + '.js')) {
+            // Resolve lifecycle manager path from overlay path config
+            const queueManagerPath = pathResolver.resolveLifecycleManagerPath(windowType);
+            if (!queueManagerPath) {
                 console.log(`[QueueManager] No queue manager found for window type: "${windowType}"`);
                 return;
             }
@@ -426,7 +440,7 @@ app.on('ready', () => {
     // Generate preload.js from lifecycle manager APIs before creating windows
     try {
         const preloadPath = path.join(__dirname, 'preload.js');
-        generatePreload(windowsToCreate, preloadPath);
+        generatePreload(windowsToCreate, preloadPath, pathResolver);
     } catch (error) {
         console.error('[Main] Failed to generate preload.js:', error);
         console.warn('[Main] Continuing with existing preload.js');
@@ -469,8 +483,8 @@ app.on('ready', () => {
 
     });
 
-    // Extract wheel options from config (exclude options with enabled: false)
-    const wheelWindowConfig = ecosystemConfig.windows.find(w => w.id === 'wheel');
+    // Extract wheel options from the enabled wheel window (there may be multiple entries with id "wheel")
+    const wheelWindowConfig = ecosystemConfig.windows.find(w => w.id === 'wheel' && w.enabled);
     const rawWheelOptions = wheelWindowConfig?.options?.wheel || [];
     let allWheelOptions = rawWheelOptions.filter(opt => opt.enabled !== false);
     uniqueApplications.clear(); // Clear any previous applications
@@ -488,7 +502,7 @@ app.on('ready', () => {
     // Load configuration for each discovered application
     uniqueApplications.forEach(appName => {
         try {
-            const configLoader = new ApplicationConfigLoader(appName);
+            const configLoader = new ApplicationConfigLoader(appName, pathResolver);
             applicationConfigs[appName] = configLoader.loadAll();
             console.log(`[Main] Loaded configuration for application: ${appName}`);
         } catch (error) {
@@ -568,7 +582,7 @@ app.on('ready', () => {
     // This ensures we capture any APIs that require full initialization
     try {
         const preloadPath = path.join(__dirname, 'preload.js');
-        generatePreload(queueManagers, preloadPath);
+        generatePreload(queueManagers, preloadPath, pathResolver);
     } catch (error) {
         console.error('[Main] Failed to regenerate preload.js after initialization:', error);
     }
