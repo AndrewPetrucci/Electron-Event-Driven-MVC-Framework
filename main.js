@@ -251,6 +251,9 @@ function registerIpcHandlers() {
                 width: storedWidth,
                 height: storedHeight
             });
+            if (width !== undefined || height !== undefined) {
+                setStoredWindowDimensions(window, storedWidth, storedHeight);
+            }
         }
     });
 

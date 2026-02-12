@@ -169,8 +169,114 @@ class WindowBar {
     }
 }
 
-// Auto-initialize all elements with data-window-bar attribute
+/**
+ * Resize handles for frameless windows: drag outer borders to resize.
+ * Creates 8 hit areas (4 edges + 4 corners) and uses moveWindowTo to set bounds.
+ */
+class ResizeHandles {
+    static get MIN_SIZE() { return 100; }
+
+    constructor() {
+        this.container = null;
+        this.isResizing = false;
+        this.edge = null;
+        this.initialMouseX = 0;
+        this.initialMouseY = 0;
+        this.initialBounds = null;
+        this.boundMove = (e) => this.onPointerMove(e);
+        this.boundUp = (e) => this.onPointerUp(e);
+    }
+
+    init() {
+        if (!window.electron || !window.electron.getWindowPosition || !window.electron.moveWindowTo) {
+            return;
+        }
+        if (this.container && this.container.parentNode) {
+            return;
+        }
+        const edges = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+        this.container = document.createElement('div');
+        this.container.className = 'window-resize-handles';
+        this.container.setAttribute('aria-hidden', 'true');
+        edges.forEach((edge) => {
+            const handle = document.createElement('div');
+            handle.className = 'window-resize-handle';
+            handle.setAttribute('data-edge', edge);
+            this.container.appendChild(handle);
+        });
+        document.body.appendChild(this.container);
+
+        this.container.addEventListener('pointerdown', (e) => this.onPointerDown(e));
+    }
+
+    onPointerDown(e) {
+        if (e.button !== 0) return;
+        const handle = e.target.closest('.window-resize-handle');
+        if (!handle) return;
+        this.edge = handle.getAttribute('data-edge');
+        if (!this.edge) return;
+
+        this.isResizing = true;
+        this.initialMouseX = e.screenX;
+        this.initialMouseY = e.screenY;
+        this.initialBounds = window.electron.getWindowPosition();
+        if (!this.initialBounds || typeof this.initialBounds.width !== 'number' || typeof this.initialBounds.height !== 'number') {
+            this.isResizing = false;
+            return;
+        }
+        handle.setPointerCapture(e.pointerId);
+        document.addEventListener('pointermove', this.boundMove);
+        document.addEventListener('pointerup', this.boundUp);
+        e.preventDefault();
+    }
+
+    onPointerMove(e) {
+        if (!this.isResizing || !this.initialBounds) return;
+        const dx = e.screenX - this.initialMouseX;
+        const dy = e.screenY - this.initialMouseY;
+        const { x, y, width, height } = this.initialBounds;
+        const min = ResizeHandles.MIN_SIZE;
+        let newX = x;
+        let newY = y;
+        let newW = width;
+        let newH = height;
+
+        if (this.edge.includes('e')) {
+            newW = Math.max(min, width + dx);
+        }
+        if (this.edge.includes('w')) {
+            const dw = Math.min(dx, width - min);
+            newX = x + dw;
+            newW = width - dw;
+        }
+        if (this.edge.includes('s')) {
+            newH = Math.max(min, height + dy);
+        }
+        if (this.edge.includes('n')) {
+            const dh = Math.min(dy, height - min);
+            newY = y + dh;
+            newH = height - dh;
+        }
+
+        window.electron.moveWindowTo(newX, newY, newW, newH);
+        e.preventDefault();
+    }
+
+    onPointerUp(e) {
+        if (!this.isResizing) return;
+        this.isResizing = false;
+        this.initialBounds = null;
+        this.edge = null;
+        document.removeEventListener('pointermove', this.boundMove);
+        document.removeEventListener('pointerup', this.boundUp);
+        e.preventDefault();
+    }
+}
+
+// Auto-initialize all elements with data-window-bar attribute and resize handles
 document.addEventListener('DOMContentLoaded', () => {
     const windowBars = document.querySelectorAll('[data-window-bar]');
     windowBars.forEach(el => new WindowBar(el));
+    const resizeHandles = new ResizeHandles();
+    resizeHandles.init();
 });

@@ -139,3 +139,81 @@ html, body {
 .maximize-btn .maximize-icon[hidden] {
     display: none !important;
 }
+
+/* Resize handles: thin strips at viewport edges for frameless window resize */
+.window-resize-handles {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+.window-resize-handles .window-resize-handle {
+    position: absolute;
+    pointer-events: auto;
+    z-index: 1;
+}
+
+.window-resize-handles .window-resize-handle[data-edge="n"] {
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    cursor: n-resize;
+}
+
+.window-resize-handles .window-resize-handle[data-edge="s"] {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    cursor: s-resize;
+}
+
+.window-resize-handles .window-resize-handle[data-edge="e"] {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 4px;
+    cursor: e-resize;
+}
+
+.window-resize-handles .window-resize-handle[data-edge="w"] {
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 4px;
+    cursor: w-resize;
+}
+
+.window-resize-handles .window-resize-handle[data-edge="ne"] {
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 8px;
+    cursor: ne-resize;
+}
+
+.window-resize-handles .window-resize-handle[data-edge="nw"] {
+    top: 0;
+    left: 0;
+    width: 8px;
+    height: 8px;
+    cursor: nw-resize;
+}
+
+.window-resize-handles .window-resize-handle[data-edge="se"] {
+    bottom: 0;
+    right: 0;
+    width: 8px;
+    height: 8px;
+    cursor: se-resize;
+}
+
+.window-resize-handles .window-resize-handle[data-edge="sw"] {
+    bottom: 0;
+    left: 0;
+    width: 8px;
+    height: 8px;
+    cursor: sw-resize;
+}
