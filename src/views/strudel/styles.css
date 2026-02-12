@@ -178,7 +178,9 @@
     color: #d4d4d4;
 }
 
-/* Ensure [hidden] wins over display: flex so the whole panel (and children) is hidden */
+/* Ensure [hidden] wins over display: flex so panels and their children are hidden */
+#strudel-vertical-split[hidden],
+#strudel-docs-container[hidden],
 #strudel-docs[hidden],
 .strudel-pallet[hidden] {
     display: none !important;
@@ -434,8 +436,8 @@
 /* Export WAV block: absolute bottom-right in strudel content */
 .strudel-export-wrap {
     position: absolute;
-    bottom: 12px;
-    right: 12px;
+    bottom: 6px;
+    right: 20px;
     display: flex;
     align-items: center;
     gap: 8px;

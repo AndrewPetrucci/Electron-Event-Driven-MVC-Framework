@@ -1,5 +1,12 @@
 [
   {
+    "id": "settingsShowDocs",
+    "label": "Show docs",
+    "type": "checkbox",
+    "ariaLabel": "Show documentation panel",
+    "boundsKey": "showDocs"
+  },
+  {
     "id": "settingsPlaybackVolume",
     "label": "Playback volume",
     "type": "range",

@@ -87,22 +87,22 @@
                         <input type="number" id="strudelExportCycles" class="strudel-export-cycles" min="1" max="999" value="4" title="Number of cycles to export" aria-label="Export cycles">
                         <button type="button" class="window-btn strudel-tool-btn export-wav-btn" id="exportWavBtn" title="Export as WAV (offline render)">
                             <svg class="strudel-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-                            <span class="strudel-export-wav-text">Export WAV</span>
+                            <span class="strudel-export-wav-text">Export</span>
                         </button>
                     </div>
                 </div>
-                <div class="vertical-split">
-                    <div class="horrizontal-split">
-                        <button type="button" class="horrizontal-split-btn button-depressed" id="showPalletBtn" title="Show pallet">Pallet</button>
-                        <button type="button" class="horrizontal-split-btn" id="showDocsBtn" title="Show documentation">Docs</button>
-                    </div>
-                    <div class="docs-container">
-                        <div id="strudel-pallet" class="strudel-pallet" aria-label="Strudel palette">
+                <div id="strudel-vertical-split" class="vertical-split">
+                    <!-- <div class="horrizontal-split">
+                        <button type="button" class="horrizontal-split-btn button-depressed" id="showDocsBtn" title="Show documentation">Docs</button>
+                        <button type="button" class="horrizontal-split-btn" id="showPalletBtn" title="Show pallet">Pallet</button>
+                    </div> -->
+                    <div id="strudel-docs-container" class="docs-container">
+                        <div id="strudel-docs" class="strudel-docs" aria-label="Function documentation">
+                            <iframe id="strudel-docs-iframe" class="strudel-docs-iframe" title="Strudel documentation" src="https://strudel.cc/workshop/getting-started"></iframe>
+                        </div>
+                        <div id="strudel-pallet" class="strudel-pallet" aria-label="Strudel palette" hidden>
                             <div class="pallet-button-container"></div>
                             <div class="strudel-pallet-content"></div>
-                        </div>
-                        <div id="strudel-docs" class="strudel-docs" aria-label="Function documentation" hidden>
-                            <iframe id="strudel-docs-iframe" class="strudel-docs-iframe" title="Strudel documentation" src="https://strudel.cc/workshop/getting-started"></iframe>
                         </div>
                     </div>
                 </div>

@@ -64,6 +64,9 @@ class StrudelApp {
         this.initStrudel();
         this.initSaveLoadButtons();
         this.initSettingsPanel();
+        const initialShowDocs = this.getStoredShowDocs();
+        console.log('[StrudelApp] init: applying showDocs from storage:', initialShowDocs);
+        this.applyShowDocsSetting(initialShowDocs);
         this.initDocsPalletButtons();
         this.initPalletButtons();
     }
@@ -796,6 +799,33 @@ class StrudelApp {
         } catch (_) {}
     }
 
+    /** Show docs preference: true by default. */
+    getStoredShowDocs() {
+        try {
+            const v = localStorage.getItem('strudelShowDocs');
+            if (v === 'false') return false;
+            if (v === 'true') return true;
+            return true;
+        } catch {
+            return true;
+        }
+    }
+
+    /** Show or hide docs panel and parent vertical-split when empty. */
+    applyShowDocsSetting(show) {
+        const docsEl = document.getElementById('strudel-docs-container');
+        const splitEl = document.getElementById('strudel-vertical-split');
+        console.log('[StrudelApp] applyShowDocsSetting(show=%s) docsEl=%s splitEl=%s', show, docsEl ? 'found' : 'MISSING', splitEl ? 'found' : 'MISSING');
+        if (docsEl) {
+            docsEl.hidden = !show;
+            console.log('[StrudelApp] docs-container hidden=%s', docsEl.hidden);
+        }
+        if (splitEl) {
+            splitEl.hidden = !show;
+            console.log('[StrudelApp] vertical-split hidden=%s', splitEl.hidden);
+        }
+    }
+
     /**
      * Initialize settings button and panel. Uses shared initSettingsPanel with shared + strudel settings-fields.json.
      */
@@ -835,6 +865,7 @@ class StrudelApp {
                 const pos = (window.electron && typeof window.electron.getWindowPosition === 'function') ? window.electron.getWindowPosition() : {};
                 const out = typeof pos === 'object' && pos !== null ? { ...pos } : {};
                 out.volume = self.getStoredPlaybackVolume();
+                out.showDocs = self.getStoredShowDocs();
                 return out;
             },
             applyValues: (values) => {
@@ -850,13 +881,24 @@ class StrudelApp {
                     const toolbarVol = document.getElementById('toolbarVolumeSlider');
                     if (toolbarVol) toolbarVol.value = String(v);
                 }
+                if (values.showDocs !== undefined) {
+                    console.log('[StrudelApp] Saving showDocs=%s', values.showDocs);
+                    try {
+                        localStorage.setItem('strudelShowDocs', values.showDocs ? 'true' : 'false');
+                        console.log('[StrudelApp] localStorage strudelShowDocs set to', localStorage.getItem('strudelShowDocs'));
+                    } catch (e) {
+                        console.warn('[StrudelApp] Failed to save showDocs to localStorage', e);
+                    }
+                    self.applyShowDocsSetting(values.showDocs);
+                }
             },
             validate: (values) => {
-                const { x, y, width, height, volume } = values;
+                const { x, y, width, height, volume, showDocs } = values;
                 const hasPos = [x, y, width, height].some((v) => v != null);
                 const posOk = !hasPos || (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(width) && width >= 100 && Number.isFinite(height) && height >= 100);
                 const volOk = volume == null || (Number.isFinite(volume) && volume >= 0 && volume <= 100);
-                return posOk && volOk;
+                const showDocsOk = showDocs == null || typeof showDocs === 'boolean';
+                return posOk && volOk && showDocsOk;
             },
             logLabel: 'StrudelApp',
         });

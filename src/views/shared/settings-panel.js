@@ -53,11 +53,14 @@ export async function initSettingsPanel(options) {
         th.textContent = field.label;
         const td = document.createElement('td');
         const input = document.createElement('input');
-        input.type = field.type || 'number';
+        const isCheckbox = (field.type || '').toLowerCase() === 'checkbox';
+        input.type = isCheckbox ? 'checkbox' : (field.type || 'number');
         input.id = field.id;
-        input.step = String(field.step ?? 1);
-        if (field.min != null) input.min = String(field.min);
-        if (field.max != null) input.max = String(field.max);
+        if (!isCheckbox) {
+            input.step = String(field.step ?? 1);
+            if (field.min != null) input.min = String(field.min);
+            if (field.max != null) input.max = String(field.max);
+        }
         if (field.ariaLabel) input.setAttribute('aria-label', field.ariaLabel);
         td.appendChild(input);
         tr.appendChild(th);
@@ -72,7 +75,8 @@ export async function initSettingsPanel(options) {
         const th = tr.querySelector('th');
         const td = tr.querySelector('td');
         const label = th ? th.textContent.trim() : '';
-        const value = td?.querySelector('input')?.value ?? '';
+        const input = td?.querySelector('input');
+        const value = input?.type === 'checkbox' ? (input.checked ? 'yes' : 'no') : (input?.value ?? '');
         return (label + ' ' + value).toLowerCase();
     };
 
@@ -99,7 +103,10 @@ export async function initSettingsPanel(options) {
         if (values == null || typeof values !== 'object') return;
         fields.forEach((field) => {
             const input = document.getElementById(field.id);
-            if (input && field.boundsKey != null && values[field.boundsKey] != null) {
+            if (!input || field.boundsKey == null) return;
+            if (input.type === 'checkbox') {
+                input.checked = !!values[field.boundsKey];
+            } else if (values[field.boundsKey] != null) {
                 input.value = String(Math.round(Number(values[field.boundsKey])));
             }
         });
@@ -112,11 +119,15 @@ export async function initSettingsPanel(options) {
         fields.forEach((field) => {
             const input = document.getElementById(field.id);
             if (!input || field.boundsKey == null) return;
-            const num = Math.round(Number(input.value));
-            values[field.boundsKey] = num;
-            if (!Number.isFinite(num)) valid = false;
-            if (field.min != null && num < field.min) valid = false;
-            if (field.max != null && num > field.max) valid = false;
+            if (input.type === 'checkbox') {
+                values[field.boundsKey] = input.checked;
+            } else {
+                const num = Math.round(Number(input.value));
+                values[field.boundsKey] = num;
+                if (!Number.isFinite(num)) valid = false;
+                if (field.min != null && num < field.min) valid = false;
+                if (field.max != null && num > field.max) valid = false;
+            }
         });
         if (!valid || !validate(values)) return;
         applyValues(values);
