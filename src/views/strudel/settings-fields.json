@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "id": "settingsPlaybackVolume",
+    "label": "Playback volume",
+    "type": "range",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "ariaLabel": "Strudel playback volume",
+    "boundsKey": "volume"
+  }
+]

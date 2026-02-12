@@ -57,6 +57,7 @@ export async function initSettingsPanel(options) {
         input.id = field.id;
         input.step = String(field.step ?? 1);
         if (field.min != null) input.min = String(field.min);
+        if (field.max != null) input.max = String(field.max);
         if (field.ariaLabel) input.setAttribute('aria-label', field.ariaLabel);
         td.appendChild(input);
         tr.appendChild(th);
@@ -115,6 +116,7 @@ export async function initSettingsPanel(options) {
             values[field.boundsKey] = num;
             if (!Number.isFinite(num)) valid = false;
             if (field.min != null && num < field.min) valid = false;
+            if (field.max != null && num > field.max) valid = false;
         });
         if (!valid || !validate(values)) return;
         applyValues(values);

@@ -21,7 +21,6 @@
                     <button class="window-btn strudel-tool-btn stop-btn" id="stopBtn" title="Stop">
                         <svg class="strudel-tool-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg>
                     </button>
-                    <span id="strudelCycleDisplay" class="strudel-cycle-display" aria-live="polite" aria-label="Current cycle"></span>
                     <button class="window-btn strudel-tool-btn update-btn" id="updateBtn" title="Update">
                         <svg class="strudel-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1 -9 -9 9 9 0 0 1 9 9"/><path d="M21 3v6h-6"/></svg>
                     </button>
@@ -34,17 +33,16 @@
                     <button class="window-btn strudel-tool-btn new-btn" id="newBtn" title="New file">
                         <svg class="strudel-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15h6"/></svg>
                     </button>
-                    <span class="strudel-export-sep" aria-hidden="true">|</span>
-                    <label class="strudel-export-label" for="strudelExportCycles">Cycles</label>
-                    <input type="number" id="strudelExportCycles" class="strudel-export-cycles" min="1" max="999" value="4" title="Number of cycles to export" aria-label="Export cycles">
-                    <button type="button" class="window-btn strudel-tool-btn export-wav-btn" id="exportWavBtn" title="Export as WAV (offline render)">
-                        <svg class="strudel-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-                        <span class="strudel-export-wav-text">Export WAV</span>
-                    </button>
                 </div>
                 <div id="strudel-open-docs" class="strudel-open-docs" data-no-drag></div>
             </div>
             <div class="button-container window-bar-right">
+                <div class="toolbar-volume-wrap" data-no-drag>
+                    <label for="toolbarVolumeSlider" class="toolbar-volume-label" title="Playback volume">
+                        <svg class="toolbar-volume-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                    </label>
+                    <input type="range" id="toolbarVolumeSlider" class="toolbar-volume-slider" min="0" max="100" value="20" title="Playback volume" aria-label="Playback volume">
+                </div>
                 <div class="settings-wrap">
                     <button class="window-btn settings-btn" id="settingsBtn" title="Settings" aria-expanded="false" aria-haspopup="true">
                         <svg class="strudel-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
@@ -81,6 +79,17 @@
                 <div class="strudel-editor-wrap">
                     <div id="strudel-cm-root" class="strudel-cm-root"></div>
                     <textarea class="strudel-editor strudel-editor-fallback" id="strudel-editor" spellcheck="false" placeholder="Strudel code…" style="display: none;"></textarea>
+                    <div class="strudel-cycle-wrap" aria-label="Current cycle">
+                        <span id="strudelCycleDisplay" class="strudel-cycle-display" aria-live="polite" aria-label="Current cycle"></span>
+                    </div>
+                    <div class="strudel-export-wrap" aria-label="Export WAV">
+                        <label class="strudel-export-label" for="strudelExportCycles">Cycles</label>
+                        <input type="number" id="strudelExportCycles" class="strudel-export-cycles" min="1" max="999" value="4" title="Number of cycles to export" aria-label="Export cycles">
+                        <button type="button" class="window-btn strudel-tool-btn export-wav-btn" id="exportWavBtn" title="Export as WAV (offline render)">
+                            <svg class="strudel-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+                            <span class="strudel-export-wav-text">Export WAV</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="vertical-split">
                     <div class="horrizontal-split">

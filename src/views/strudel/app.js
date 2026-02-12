@@ -161,6 +161,7 @@ class StrudelApp {
             this.strudelScheduler = scheduler;
             this.audioContext = ctx;
             this.renderPatternAudio = renderPatternAudio;
+            this.getSuperdoughAudioController = typeof strudelWebaudio.getSuperdoughAudioController === 'function' ? strudelWebaudio.getSuperdoughAudioController : null;
 
             // Register node: prefix so samples() loads pack JSON from local sample-packs/ (no HTTP for map)
             if (typeof registerSamplesPrefix === 'function' && window.electron?.readSamplePack) {
@@ -175,6 +176,7 @@ class StrudelApp {
 
             await this.initializeStrudelEditor();
             await this.loadDefaultSamplePacks();
+            this.applyPlaybackVolumeToOutput(this.getStoredPlaybackVolume());
             console.log('[StrudelApp] Strudel initialized with transpiler');
         } catch (error) {
             console.warn('[StrudelApp] Failed to load Strudel from node_modules:', error);
@@ -772,10 +774,33 @@ class StrudelApp {
         }
     }
 
+    /** Default playback volume 0–100 when not stored. */
+    getStoredPlaybackVolume() {
+        try {
+            const v = Number(localStorage.getItem('strudelPlaybackVolume'));
+            return Number.isFinite(v) ? Math.max(0, Math.min(100, Math.round(v))) : 20;
+        } catch {
+            return 20;
+        }
+    }
+
+    /** Apply 0–100 volume to Strudel output gain (no-op if Strudel not ready). */
+    applyPlaybackVolumeToOutput(volumePercent) {
+        if (!Number.isFinite(volumePercent)) return;
+        const p = Math.max(0, Math.min(100, Math.round(volumePercent))) / 100;
+        const getCtrl = this.getSuperdoughAudioController;
+        if (typeof getCtrl !== 'function') return;
+        try {
+            const ctrl = getCtrl();
+            if (ctrl?.output?.destinationGain) ctrl.output.destinationGain.gain.value = p;
+        } catch (_) {}
+    }
+
     /**
      * Initialize settings button and panel. Uses shared initSettingsPanel with shared + strudel settings-fields.json.
      */
     initSettingsPanel() {
+        const self = this;
         initSettingsPanelShared({
             getFields: async () => {
                 let sharedFields = DEFAULT_SETTINGS_FIELDS;
@@ -806,18 +831,50 @@ class StrudelApp {
                 }
                 return [...sharedFields, ...strudelFields];
             },
-            getValues: () => (window.electron && typeof window.electron.getWindowPosition === 'function' ? window.electron.getWindowPosition() : null),
+            getValues: () => {
+                const pos = (window.electron && typeof window.electron.getWindowPosition === 'function') ? window.electron.getWindowPosition() : {};
+                const out = typeof pos === 'object' && pos !== null ? { ...pos } : {};
+                out.volume = self.getStoredPlaybackVolume();
+                return out;
+            },
             applyValues: (values) => {
-                if (window.electron?.moveWindowTo) {
+                if (window.electron?.moveWindowTo && Number.isFinite(values.x) && Number.isFinite(values.y) && Number.isFinite(values.width) && Number.isFinite(values.height)) {
                     window.electron.moveWindowTo(values.x, values.y, values.width, values.height);
+                }
+                if (Number.isFinite(values.volume)) {
+                    const v = Math.max(0, Math.min(100, Math.round(values.volume)));
+                    try {
+                        localStorage.setItem('strudelPlaybackVolume', String(v));
+                    } catch (_) {}
+                    self.applyPlaybackVolumeToOutput(v);
+                    const toolbarVol = document.getElementById('toolbarVolumeSlider');
+                    if (toolbarVol) toolbarVol.value = String(v);
                 }
             },
             validate: (values) => {
-                const { x, y, width, height } = values;
-                return Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(width) && width >= 100 && Number.isFinite(height) && height >= 100;
+                const { x, y, width, height, volume } = values;
+                const hasPos = [x, y, width, height].some((v) => v != null);
+                const posOk = !hasPos || (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(width) && width >= 100 && Number.isFinite(height) && height >= 100);
+                const volOk = volume == null || (Number.isFinite(volume) && volume >= 0 && volume <= 100);
+                return posOk && volOk;
             },
             logLabel: 'StrudelApp',
         });
+
+        // Toolbar volume slider (bar next to settings button): keep in sync with stored volume and apply on change
+        const toolbarVol = document.getElementById('toolbarVolumeSlider');
+        if (toolbarVol) {
+            toolbarVol.value = String(self.getStoredPlaybackVolume());
+            const syncVolume = () => {
+                const v = Math.max(0, Math.min(100, Math.round(Number(toolbarVol.value))));
+                try {
+                    localStorage.setItem('strudelPlaybackVolume', String(v));
+                } catch (_) {}
+                self.applyPlaybackVolumeToOutput(v);
+            };
+            toolbarVol.addEventListener('input', syncVolume);
+            toolbarVol.addEventListener('change', syncVolume);
+        }
     }
 
     /**
